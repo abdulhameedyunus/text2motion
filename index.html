@@ -1,0 +1,1659 @@
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, Tooltip, CartesianGrid
+} from "recharts";
+
+/* ============================== STYLES ============================== */
+const CSS = `
+@import url('https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.css');
+@import url('https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-500-normal.css');
+@import url('https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-600-normal.css');
+@import url('https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-700-normal.css');
+@import url('https://cdn.jsdelivr.net/fontsource/fonts/space-grotesk@latest/latin-500-normal.css');
+@import url('https://cdn.jsdelivr.net/fontsource/fonts/space-grotesk@latest/latin-700-normal.css');
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:#050816;color:#e6eaf5;font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.display{font-family:'Space Grotesk','Inter',sans-serif}
+::selection{background:rgba(139,92,246,.45)}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.13);border-radius:99px}
+::-webkit-scrollbar-track{background:transparent}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;color:inherit}
+:focus-visible{outline:2px solid #38bdf8;outline-offset:2px;border-radius:8px}
+img{user-select:none}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+.muted{color:#9aa3c2}.small{font-size:12.5px}
+.grad-text{background:linear-gradient(90deg,#38bdf8,#8b5cf6,#d946ef,#38bdf8);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:gradMove 7s linear infinite}
+@keyframes gradMove{0%{background-position:0% 50%}100%{background-position:250% 50%}}
+.glass{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.09);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-radius:22px}
+.cardPad{padding:24px}
+.btn{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:9px;border-radius:16px;font-weight:600;font-size:15px;padding:13px 26px;transition:transform .25s cubic-bezier(.2,.7,.3,1.3),box-shadow .25s,background .25s,border-color .25s;white-space:nowrap}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(135deg,#38bdf8,#6366f1 50%,#a855f7);color:#fff;box-shadow:0 10px 34px -8px rgba(99,102,241,.65),inset 0 1px 0 rgba(255,255,255,.25)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 16px 46px -8px rgba(124,92,246,.8)}
+.btn-ghost{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);color:#e6eaf5;backdrop-filter:blur(10px)}
+.btn-ghost:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.28);transform:translateY(-2px)}
+.btn-danger{background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.4);color:#fb7185}
+.btn-danger:hover{background:rgba(244,63,94,.22)}
+.btn-sm{padding:9px 16px;font-size:13.5px;border-radius:12px}
+.btn-lg{padding:17px 34px;font-size:16.5px;border-radius:18px}
+.btn-block{width:100%}
+.iconBtn{width:38px;height:38px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);transition:.2s;flex:none}
+.iconBtn:hover{background:rgba(255,255,255,.12);transform:translateY(-1px)}
+.ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.35);transform:scale(0);animation:rip .65s ease-out;pointer-events:none}
+@keyframes rip{to{transform:scale(2.6);opacity:0}}
+.field{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}
+.label{font-size:13px;font-weight:600;color:#aab2cf;letter-spacing:.02em}
+.input,.textarea,select.input{width:100%;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:13px 15px;font-size:14.5px;color:#eef1fb;transition:.2s;outline:none}
+.input:focus,.textarea:focus{border-color:rgba(110,130,246,.7);box-shadow:0 0 0 3px rgba(99,120,246,.18);background:rgba(255,255,255,.06)}
+.textarea{resize:vertical;min-height:130px;line-height:1.65}
+.selectWrap{position:relative;display:block}
+.selectWrap select{appearance:none;-webkit-appearance:none;padding-right:40px;cursor:pointer}
+.selectWrap select option{background:#0a0f24;color:#e6eaf5}
+.selectWrap>svg{position:absolute;right:14px;top:50%;transform:translateY(-50%);pointer-events:none;color:#8b93b0}
+.switch{position:relative;width:46px;height:26px;flex:none}
+.switch input{opacity:0;width:100%;height:100%;position:absolute;margin:0;cursor:pointer;z-index:2}
+.switch .track{position:absolute;inset:0;border-radius:99px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.12);transition:.25s}
+.switch .thumb{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.25s;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.switch input:checked~.track{background:linear-gradient(135deg,#38bdf8,#8b5cf6);border-color:transparent}
+.switch input:checked~.thumb{left:23px}
+input[type=range].range{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:99px;background:linear-gradient(90deg,#38bdf8,#8b5cf6) 0/var(--fill,50%) 100% no-repeat,rgba(255,255,255,.1);outline:none;cursor:pointer}
+input[type=range].range::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 0 0 4px rgba(99,102,246,.35),0 2px 8px rgba(0,0,0,.5);transition:.15s;cursor:grab}
+.chip{padding:8px 15px;border-radius:99px;font-size:13px;font-weight:600;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.11);color:#aab2cf;transition:.2s;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.chip:hover{border-color:rgba(255,255,255,.3);color:#fff}
+.chip.on{background:linear-gradient(135deg,rgba(56,189,248,.2),rgba(168,85,247,.22));border-color:rgba(139,120,246,.6);color:#fff}
+.tRow{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.tLab{font-size:14.5px;font-weight:600}
+.tSub{font-size:12.5px;color:#78829f;margin-top:2px}
+.meter{height:8px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.meterFill{height:100%;border-radius:99px;background:linear-gradient(90deg,#38bdf8,#8b5cf6)}
+.nav{position:fixed;top:0;left:0;right:0;z-index:60;transition:.3s;padding:18px 0}
+.nav.scrolled{background:rgba(5,8,22,.75);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.07);padding:12px 0}
+.navInner{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.navLinks{display:flex;gap:28px;align-items:center}
+.navLinks a{font-size:14.5px;color:#aab2cf;font-weight:500;transition:.2s}
+.navLinks a:hover{color:#fff}
+.hero{position:relative;min-height:100vh;display:flex;align-items:center;padding:150px 0 100px;overflow:hidden}
+.blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.5;animation:drift 14s ease-in-out infinite}
+.b1{width:560px;height:560px;background:radial-gradient(circle,#2043c7,transparent 65%);top:-140px;left:-120px}
+.b2{width:520px;height:520px;background:radial-gradient(circle,#7c3aed,transparent 65%);top:8%;right:-140px;animation-delay:-5s}
+.b3{width:480px;height:480px;background:radial-gradient(circle,#0891b2,transparent 60%);bottom:-160px;left:30%;animation-delay:-9s}
+@keyframes drift{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(34px,-24px) scale(1.08)}}
+.beam{position:absolute;width:2px;height:70vh;background:linear-gradient(to bottom,transparent,rgba(120,160,255,.55),transparent);top:-5%;filter:blur(1px);animation:beamSweep 8s ease-in-out infinite}
+@keyframes beamSweep{0%,100%{opacity:0;transform:translateX(-34px) rotate(8deg)}50%{opacity:.75;transform:translateX(34px) rotate(8deg)}}
+.particle{position:absolute;border-radius:50%;background:rgba(160,190,255,.85);animation:floatY var(--dur,6s) ease-in-out infinite;box-shadow:0 0 8px rgba(150,180,255,.8)}
+@keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
+.heroGrid{display:grid;grid-template-columns:1.05fr .95fr;gap:60px;align-items:center;position:relative}
+.heroBadge{display:inline-flex;align-items:center;gap:9px;font-size:13px;font-weight:600;color:#c4b5fd;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.35);padding:8px 16px;border-radius:99px}
+.pulseDot{width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 0 0 rgba(52,211,153,.6);animation:ping 1.8s infinite}
+@keyframes ping{70%{box-shadow:0 0 0 9px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
+.h1{font-size:clamp(38px,5vw,62px);line-height:1.06;letter-spacing:-.02em;font-weight:700;margin:22px 0}
+.sub{font-size:18px;color:#9aa3c2;line-height:1.7;max-width:560px}
+.ctaRow{display:flex;gap:16px;margin-top:36px;flex-wrap:wrap}
+.heroStats{display:flex;gap:38px;margin-top:44px;flex-wrap:wrap}
+.hStat b{font-size:22px;font-weight:700}
+.hStat span{display:block;font-size:12.5px;color:#78829f;margin-top:3px}
+.mockWrap{position:relative;perspective:1200px}
+.mock{border-radius:24px;padding:18px;transform:rotateY(-8deg) rotateX(4deg);transition:transform .6s;box-shadow:0 40px 90px -20px rgba(70,90,255,.35)}
+.mockWrap:hover .mock{transform:rotateY(-3deg) rotateX(1deg)}
+.mockBar{display:flex;gap:6px;margin-bottom:14px}
+.mockBar i{width:10px;height:10px;border-radius:50%;display:block}
+.mockPrompt{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;margin-bottom:14px;font-size:12.5px;color:#c3c9e2}
+.mockPreview{position:relative;border-radius:16px;overflow:hidden;aspect-ratio:16/9}
+.mockPreview img{width:100%;height:100%;object-fit:cover;display:block}
+.playOrb{position:absolute;inset:0;margin:auto;width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.16);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;animation:ringPulse 2.4s infinite;color:#fff;cursor:pointer}
+@keyframes ringPulse{0%{box-shadow:0 0 0 0 rgba(139,92,246,.5)}100%{box-shadow:0 0 0 26px rgba(139,92,246,0)}}
+.floatCard{position:absolute;display:flex;gap:10px;align-items:center;padding:12px 16px;border-radius:16px;font-size:13px;font-weight:600;animation:floatY 6s ease-in-out infinite;box-shadow:0 20px 50px -12px rgba(0,0,0,.6);z-index:3}
+.fc1{top:-24px;right:-14px}.fc2{bottom:40px;left:-40px;animation-delay:-2s}.fc3{bottom:-26px;right:12%;animation-delay:-4s}
+.marquee{overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
+.mTrack{display:flex;gap:70px;width:max-content;animation:marqueeX 30s linear infinite;padding:6px 0}
+@keyframes marqueeX{to{transform:translateX(-50%)}}
+.logoItem{display:flex;align-items:center;gap:9px;color:#67719a;font-weight:700;font-size:17px;letter-spacing:.02em;white-space:nowrap}
+.section{padding:110px 0;position:relative}
+.kicker{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#7dd3fc;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);padding:7px 15px;border-radius:99px;margin-bottom:18px}
+.h2{font-size:clamp(28px,3.6vw,42px);letter-spacing:-.02em;line-height:1.15;font-weight:700}
+.sectionSub{color:#9aa3c2;font-size:16.5px;max-width:640px;margin:14px auto 0;line-height:1.7}
+.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:22px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.stylesGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:20px}
+.featureCard{padding:26px;transition:transform .35s,border-color .35s,box-shadow .35s;position:relative;overflow:hidden}
+.featureCard:hover{transform:translateY(-6px);border-color:rgba(139,92,246,.45);box-shadow:0 24px 60px -18px rgba(99,102,241,.4)}
+.fIcon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(56,189,248,.16),rgba(168,85,247,.16));border:1px solid rgba(139,92,246,.3);color:#a5b4fc;margin-bottom:16px}
+.styleCard{overflow:hidden;padding:0;cursor:pointer;position:relative}
+.styleCard img{width:100%;aspect-ratio:16/10;object-fit:cover;display:block;transition:transform .6s}
+.styleCard:hover img{transform:scale(1.07)}
+.styleInfo{padding:15px 17px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.stepCard{padding:28px;text-align:center;position:relative}
+.stepNum{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;background:linear-gradient(135deg,#38bdf8,#a855f7);font-weight:700;font-size:17px;color:#fff;box-shadow:0 10px 26px -8px rgba(124,58,237,.7)}
+.priceCard{padding:32px;display:flex;flex-direction:column;position:relative}
+.priceCard.premium{border:1px solid rgba(139,92,246,.55);box-shadow:0 30px 80px -20px rgba(124,58,237,.5);background:linear-gradient(180deg,rgba(99,102,241,.13),rgba(255,255,255,.03))}
+.popBadge{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#38bdf8,#a855f7);font-size:12px;font-weight:700;padding:6px 16px;border-radius:99px;letter-spacing:.06em;color:#fff}
+.priceRow{display:flex;align-items:baseline;gap:6px;margin:16px 0 4px}
+.priceRow b{font-size:44px;font-weight:700;letter-spacing:-.02em}
+.checkList{list-style:none;display:flex;flex-direction:column;gap:11px;margin:22px 0;flex:1}
+.checkList li{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;color:#c3c9e2}
+.checkList svg{color:#34d399;flex:none;margin-top:2px}
+.testCard{padding:26px}
+.avatarG{display:flex;align-items:center;justify-content:center;border-radius:50%;font-weight:700;color:#fff;flex:none}
+.faqItem{border:1px solid rgba(255,255,255,.09);border-radius:18px;margin-bottom:12px;overflow:hidden;background:rgba(255,255,255,.028)}
+.faqQ{width:100%;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:20px 24px;font-size:16px;font-weight:600;text-align:left;color:#e6eaf5}
+.faqA{padding:0 24px 20px;color:#9aa3c2;font-size:14.8px;line-height:1.75}
+.footer{border-top:1px solid rgba(255,255,255,.07);padding:70px 0 34px;background:rgba(255,255,255,.012)}
+.fGrid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:34px}
+.fCol h4{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:#78829f;margin-bottom:16px}
+.fCol a{display:block;color:#aab2cf;font-size:14px;margin-bottom:11px;transition:.2s;cursor:pointer}
+.fCol a:hover{color:#7dd3fc}
+.authPage{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:60px 20px;position:relative;overflow:hidden}
+.authCard{width:100%;max-width:450px;padding:38px;position:relative;z-index:2}
+.orDiv{display:flex;align-items:center;gap:14px;margin:20px 0;color:#67719a;font-size:12.5px}
+.orDiv:before,.orDiv:after{content:'';height:1px;flex:1;background:rgba(255,255,255,.1)}
+.socialBtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);font-weight:600;font-size:14px;transition:.2s}
+.socialBtn:hover{background:rgba(255,255,255,.1);transform:translateY(-1px)}
+.otpRow{display:flex;gap:10px;justify-content:center;margin:22px 0}
+.otpRow input{width:48px;height:56px;text-align:center;font-size:22px;font-weight:700;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);outline:none;color:#fff}
+.otpRow input:focus{border-color:#8b5cf6;box-shadow:0 0 0 3px rgba(139,92,246,.2)}
+.shell{display:flex;min-height:100vh;background:radial-gradient(1100px 600px at 85% -10%,rgba(76,29,149,.28),transparent),#050816}
+.sidebar{width:264px;flex:none;position:fixed;top:0;bottom:0;left:0;z-index:50;display:flex;flex-direction:column;background:rgba(8,12,30,.88);backdrop-filter:blur(22px);border-right:1px solid rgba(255,255,255,.07);padding:22px 16px;transition:transform .35s;overflow-y:auto}
+.sideSec{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5d6787;font-weight:700;margin:18px 12px 8px}
+.sideLink{display:flex;align-items:center;gap:12px;width:100%;padding:11px 13px;border-radius:13px;color:#9aa3c2;font-size:14.2px;font-weight:500;transition:.2s;margin-bottom:2px;text-align:left}
+.sideLink:hover{background:rgba(255,255,255,.05);color:#fff}
+.sideLink.active{background:linear-gradient(135deg,rgba(56,189,248,.16),rgba(139,92,246,.18));color:#fff;border:1px solid rgba(124,140,246,.35);box-shadow:0 6px 20px -6px rgba(99,102,241,.4)}
+.sideLink.active svg{color:#7dd3fc}
+.sideDim{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:45;opacity:0;pointer-events:none;transition:.3s}
+.sideDim.show{opacity:1;pointer-events:auto}
+.main{flex:1;margin-left:264px;min-width:0}
+.topbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:16px;padding:16px 30px;background:rgba(5,8,22,.66);backdrop-filter:blur(18px);border-bottom:1px solid rgba(255,255,255,.06)}
+.content{padding:30px;max-width:1340px}
+.searchBox{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:13px;padding:10px 15px;flex:1;max-width:380px;color:#8b93b0}
+.searchBox input{background:none;border:none;outline:none;width:100%;font-size:14px;color:#e6eaf5}
+.statCard{padding:22px;display:flex;flex-direction:column;gap:6px}
+.statIcon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:8px}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 11px;border-radius:99px;border:1px solid}
+.pill-free{color:#94a3b8;background:rgba(148,163,184,.08);border-color:rgba(148,163,184,.25)}
+.pill-pro{color:#c4b5fd;background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.4)}
+.pill-green{color:#6ee7b7;background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3)}
+.pill-red{color:#fda4af;background:rgba(244,63,94,.1);border-color:rgba(244,63,94,.3)}
+.pill-blue{color:#7dd3fc;background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.3)}
+.table{width:100%;border-collapse:collapse;font-size:14px}
+.table th{text-align:left;padding:12px 14px;color:#78829f;font-size:12px;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,.08)}
+.table td{padding:13px 14px;border-bottom:1px solid rgba(255,255,255,.05);color:#c3c9e2}
+.table tr:hover td{background:rgba(255,255,255,.02)}
+.videoCard{overflow:hidden;padding:0;position:relative}
+.thumb{position:relative;aspect-ratio:16/9;overflow:hidden;background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.1) 50%,rgba(255,255,255,.04) 75%);background-size:200% 100%;animation:shimmer 1.6s infinite}
+@keyframes shimmer{to{background-position:-200% 0}}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s}
+.videoCard:hover .thumb img{transform:scale(1.05)}
+.thumbOverlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(5,8,22,.7),transparent 60%);display:flex;align-items:center;justify-content:center;opacity:0;transition:.3s}
+.videoCard:hover .thumbOverlay{opacity:1}
+.vMeta{padding:14px 16px}
+.vTag{position:absolute;top:10px;left:10px}
+.vDur{position:absolute;bottom:10px;right:10px;background:rgba(0,0,0,.62);padding:3px 9px;border-radius:7px;font-size:11.5px;font-weight:600;backdrop-filter:blur(4px)}
+.playerBox{position:relative;border-radius:22px;overflow:hidden;background:#000;border:1px solid rgba(255,255,255,.1);box-shadow:0 40px 90px -30px rgba(76,29,149,.55)}
+.playerBox img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
+.kb img{animation:kenburns 12s ease-in-out infinite alternate}
+@keyframes kenburns{from{transform:scale(1)}to{transform:scale(1.14) translate(1.5%,-1.5%)}}
+.playerBar{position:absolute;left:0;right:0;bottom:0;padding:40px 18px 14px;background:linear-gradient(to top,rgba(0,0,0,.88),transparent);display:flex;flex-direction:column;gap:10px}
+.timeline{height:5px;border-radius:99px;background:rgba(255,255,255,.22);cursor:pointer;position:relative}
+.timelineFill{height:100%;border-radius:99px;background:linear-gradient(90deg,#38bdf8,#a855f7);position:relative}
+.timelineFill:after{content:'';position:absolute;right:-6px;top:50%;transform:translateY(-50%);width:13px;height:13px;border-radius:50%;background:#fff;box-shadow:0 0 10px rgba(139,92,246,.9)}
+.renderPanel{padding:46px 30px;text-align:center}
+.renderOrb{width:130px;height:130px;margin:0 auto 26px;border-radius:50%;position:relative;display:flex;align-items:center;justify-content:center}
+.renderOrb:before{content:'';position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,#38bdf8,#8b5cf6,#d946ef,#38bdf8);animation:spin 2.6s linear infinite}
+.renderOrb:after{content:'';position:absolute;inset:7px;border-radius:50%;background:#0a0f24}
+.renderOrb>div{position:relative;z-index:2}
+@keyframes spin{to{transform:rotate(360deg)}}
+.progOuter{height:10px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin:20px 0 8px}
+.progFill{height:100%;border-radius:99px;background:linear-gradient(90deg,#38bdf8,#8b5cf6,#d946ef);background-size:200% 100%;animation:gradMove 2s linear infinite;transition:width .2s}
+.stepsList{display:flex;flex-direction:column;gap:10px;max-width:400px;margin:26px auto 0;text-align:left}
+.stepItem{display:flex;gap:11px;align-items:center;font-size:14px;color:#67719a;transition:.3s}
+.stepItem.done{color:#c3c9e2}
+.stepItem.now{color:#fff}
+.stepDot{width:22px;height:22px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(255,255,255,.2);font-size:11px}
+.stepItem.done .stepDot{background:linear-gradient(135deg,#38bdf8,#8b5cf6);border-color:transparent;color:#fff}
+.stepItem.now .stepDot{border-color:#8b5cf6;color:#8b5cf6;animation:pulseDot 1.4s infinite}
+@keyframes pulseDot{50%{box-shadow:0 0 0 6px rgba(139,92,246,.15)}}
+.successCheck{width:110px;height:110px;border-radius:50%;margin:0 auto 22px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(52,211,153,.16),rgba(16,185,129,.05));border:1px solid rgba(52,211,153,.5);color:#34d399;animation:ringPulseG 1.8s infinite}
+@keyframes ringPulseG{0%{box-shadow:0 0 0 0 rgba(52,211,153,.4)}100%{box-shadow:0 0 0 28px rgba(52,211,153,0)}}
+.dropzone{border:2px dashed rgba(139,120,246,.4);border-radius:20px;padding:46px 24px;text-align:center;transition:.25s;cursor:pointer;background:rgba(139,92,246,.04)}
+.dropzone.over{border-color:#38bdf8;background:rgba(56,189,248,.08);transform:scale(1.01)}
+.toastWrap{position:fixed;bottom:24px;right:24px;z-index:300;display:flex;flex-direction:column;gap:10px}
+.toastItem{display:flex;gap:11px;align-items:center;padding:14px 18px;border-radius:15px;background:rgba(12,17,40,.92);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(16px);font-size:14px;font-weight:500;box-shadow:0 16px 40px -10px rgba(0,0,0,.6);min-width:260px}
+.modalBack{position:fixed;inset:0;background:rgba(3,5,14,.72);backdrop-filter:blur(8px);z-index:120;display:flex;align-items:center;justify-content:center;padding:20px}
+.modalCard{width:100%;max-width:480px;padding:30px;position:relative;max-height:88vh;overflow:auto}
+.pager{display:flex;gap:8px;justify-content:center;margin-top:26px}
+.pager button{min-width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);font-size:14px;font-weight:600;color:#aab2cf;transition:.2s;padding:0 8px}
+.pager button.on{background:linear-gradient(135deg,#38bdf8,#8b5cf6);color:#fff;border-color:transparent}
+.pager button:hover:not(:disabled):not(.on){background:rgba(255,255,255,.1)}
+.pager button:disabled{opacity:.35;cursor:default}
+.notif{position:absolute;right:0;top:48px;width:330px;border-radius:18px;padding:8px;z-index:60}
+.notifItem{display:flex;gap:12px;padding:13px 14px;border-radius:13px;transition:.2s;cursor:pointer}
+.notifItem:hover{background:rgba(255,255,255,.05)}
+@media(max-width:1080px){.heroGrid{grid-template-columns:1fr;gap:70px}.grid4{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:repeat(2,1fr)}.fGrid{grid-template-columns:1fr 1fr}.sidebar{transform:translateX(-100%)}.sidebar.open{transform:none}.main{margin-left:0}.hide-md{display:none!important}}
+@media(max-width:640px){.grid2,.grid3,.grid4{grid-template-columns:1fr}.content{padding:18px}.topbar{padding:12px 16px}.hide-sm{display:none!important}.navLinks{display:none}.fGrid{grid-template-columns:1fr}.floatCard{display:none}.h1{font-size:38px}}
+`;
+
+/* ============================== IMAGES ============================== */
+const IMG = {
+  realistic: "https://image.qwenlm.ai/public_source/ac5c8b22-c6cf-487f-8cfa-a6d86f1904f6/12052c633-a9b9-476d-8e8b-e56ed698ec67.png",
+  cinematic: "https://image.qwenlm.ai/public_source/ac5c8b22-c6cf-487f-8cfa-a6d86f1904f6/1ad6064b3-5b0b-4cc8-be7b-d7a9f44441cc.png",
+  anime: "https://image.qwenlm.ai/public_source/ac5c8b22-c6cf-487f-8cfa-a6d86f1904f6/1f08a129a-f4fd-4100-ba29-5ba037538d02.png",
+  cartoon: "https://image.qwenlm.ai/public_source/ac5c8b22-c6cf-487f-8cfa-a6d86f1904f6/10a337546-9ff5-4477-9c17-a5b9007c960e.png",
+  pixar: "https://image.qwenlm.ai/public_source/ac5c8b22-c6cf-487f-8cfa-a6d86f1904f6/184179596-b50f-4f1c-9149-82eca803a3f3.png",
+  ghibli: "https://image.qwenlm.ai/public_source/ac5c8b22-c6cf-487f-8cfa-a6d86f1904f6/144a1866a-770b-4418-a906-32677fea0561.png",
+  anim3d: "https://image.qwenlm.ai/public_source/ac5c8b22-c6cf-487f-8cfa-a6d86f1904f6/13a624027-cdee-4c33-93ff-e54de110be8e.png",
+  cyberpunk: "https://image.qwenlm.ai/public_source/ac5c8b22-c6cf-487f-8cfa-a6d86f1904f6/11e4f9802-8fd9-4697-89b2-2073ad5af9de.png",
+  fantasy: "https://image.qwenlm.ai/public_source/ac5c8b22-c6cf-487f-8cfa-a6d86f1904f6/1b3846830-6024-4586-a34f-86328cb8ccf2.png",
+  photoreal: "https://image.qwenlm.ai/public_source/ac5c8b22-c6cf-487f-8cfa-a6d86f1904f6/116f4576e-59ae-4f69-aa83-ebde7bfa602c.png"
+};
+
+/* ============================== HELPERS ============================== */
+const uid = () => Math.random().toString(36).slice(2, 10);
+const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+const ripple = (e) => {
+  const el = e.currentTarget; const d = Math.max(el.clientWidth, el.clientHeight); const r = el.getBoundingClientRect();
+  const sp = document.createElement("span"); sp.className = "ripple";
+  sp.style.width = sp.style.height = d + "px";
+  sp.style.left = e.clientX - r.left - d / 2 + "px"; sp.style.top = e.clientY - r.top - d / 2 + "px";
+  el.appendChild(sp); setTimeout(() => sp.remove(), 700);
+};
+
+/* ============================== ICONS ============================== */
+const FICONS = {
+  play: <path d="M8 5v14l11-7z" />,
+  pause: <path d="M7 5h4v14H7zM13 5h4v14h-4z" />,
+  star: <path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.2l7.1-.6L12 2z" />,
+  google: <path d="M21.35 11.1H12v3.2h5.3c-.5 2.4-2.6 3.7-5.3 3.7a6 6 0 110-12c1.5 0 2.9.55 4 1.45l2.4-2.4A10 10 0 1012 22c5.8 0 9.6-4.1 9.6-9.8 0-.4-.05-.75-.25-1.1z" />,
+  github: <path d="M12 .5A11.5 11.5 0 00.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.25.8-.55v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.45-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 015.8 0c2.2-1.5 3.2-1.2 3.2-1.2.6 1.6.2 2.8.1 3.1.75.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.35.8 1.05.8 2.1v3.1c0 .3.2.65.8.55A11.5 11.5 0 0023.5 12 11.5 11.5 0 0012 .5z" />,
+  xlogo: <path d="M18 3h3l-7.5 8.6L22 21h-6.6l-5.2-6.4L4.3 21H1.2l8-9.2L1.5 3h6.8l4.7 5.9L18 3z" />,
+  youtube: <><path d="M23 12s0-3.8-.5-5.6a2.9 2.9 0 00-2-2C18.6 4 12 4 12 4s-6.6 0-8.5.4a2.9 2.9 0 00-2 2C1 8.2 1 12 1 12s0 3.8.5 5.6a2.9 2.9 0 002 2c1.9.4 8.5.4 8.5.4s6.6 0 8.5-.4a2.9 2.9 0 002-2c.5-1.8.5-5.6.5-5.6z" /><path d="M10 15.5v-7l6 3.5-6 3.5z" fill="#050816" /></>
+};
+const ICONS = {
+  sparkles: <><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" /><path d="M19 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2z" /></>,
+  film: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M7 5v14M17 5v14M3 10h4M3 14h4M17 10h4M17 14h4" /></>,
+  image: <><rect x="3" y="4" width="18" height="16" rx="3" /><circle cx="9" cy="10" r="1.6" /><path d="M21 15l-4.5-4.5L7 20" /></>,
+  mic: <><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0014 0M12 18v3" /></>,
+  subs: <><rect x="3" y="5" width="18" height="14" rx="3" /><path d="M7 13h4M13 13h4M7 16h2M11 16h6" /></>,
+  music: <><path d="M9 18V6l11-2v12" /><circle cx="6.5" cy="18" r="2.5" /><circle cx="17.5" cy="16" r="2.5" /></>,
+  layers: <><path d="M12 2l10 5.5L12 13 2 7.5 12 2z" /><path d="M2 12l10 5 10-5" /><path d="M2 16.5l10 5 10-5" /></>,
+  clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.2 2" /></>,
+  cloud: <path d="M17.5 19a4.5 4.5 0 100-9h-.3A7 7 0 104 15.9 3.5 3.5 0 006.5 19h11z" />,
+  zap: <path d="M13 2L4 14h7l-1 8 10-13h-8l1-7z" />,
+  shield: <><path d="M12 2l8 3.5v5.7c0 5-3.4 8.6-8 10.8-4.6-2.2-8-5.8-8-10.8V5.5L12 2z" /><path d="M9 11.5l2.2 2.2L15.5 9" /></>,
+  download: <><path d="M12 3v12" /><path d="M8 11l4 4 4-4" /><path d="M4 21h16" /></>,
+  share: <><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 10.7l6.8-4M8.6 13.3l6.8 4" /></>,
+  wand: <><path d="M4 20l10-10" /><path d="M14 4l.9 2.1L17 7l-2.1.9L14 10l-.9-2.1L11 7l2.1-.9L14 4z" /><path d="M19 12l.6 1.4L21 14l-1.4.6L19 16l-.6-1.4L17 14l1.4-.6L19 12z" /></>,
+  sliders: <><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3" /><path d="M2 14h4M10 8h4M18 16h4" /></>,
+  user: <><circle cx="12" cy="8" r="4" /><path d="M4 21c.8-4 4-6 8-6s7.2 2 8 6" /></>,
+  users: <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c.7-3.5 3.3-5.5 6.5-5.5s5.8 2 6.5 5.5" /><path d="M16 4.6a3.5 3.5 0 010 6.8M17.5 14.7c2 .7 3.5 2.5 4 5.3" /></>,
+  grid: <><rect x="3" y="3" width="7.5" height="7.5" rx="2" /><rect x="13.5" y="3" width="7.5" height="7.5" rx="2" /><rect x="3" y="13.5" width="7.5" height="7.5" rx="2" /><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2" /></>,
+  logout: <><path d="M9 21H6a2 2 0 01-2-2V5a2 2 0 012-2h3" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></>,
+  chevD: <path d="M6 9l6 6 6-6" />,
+  chevR: <path d="M9 6l6 6-6 6" />,
+  chevL: <path d="M15 6l-6 6 6 6" />,
+  arrowR: <><path d="M4 12h16" /><path d="M14 6l6 6-6 6" /></>,
+  search: <><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></>,
+  bell: <><path d="M18 9a6 6 0 10-12 0c0 7-2.5 8-2.5 8h17S18 16 18 9z" /><path d="M10.3 21a2 2 0 003.4 0" /></>,
+  x: <path d="M6 6l12 12M18 6L6 18" />,
+  check: <path d="M5 13l4 4L19 7" />,
+  plus: <path d="M12 5v14M5 12h14" />,
+  trash: <><path d="M3 6h18" /><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" /><path d="M6 6l1 14a2 2 0 002 2h6a2 2 0 002-2l1-14" /></>,
+  copy: <><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></>,
+  pencil: <path d="M17 3l4 4L8 20l-5 1 1-5L17 3z" />,
+  refresh: <><path d="M21 12a9 9 0 11-2.6-6.4" /><path d="M21 3v6h-6" /></>,
+  upload: <><path d="M12 16V4" /><path d="M8 8l4-4 4 4" /><path d="M4 20h16" /></>,
+  camera: <><path d="M4 8h3l2-3h6l2 3h3a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z" /><circle cx="12" cy="13" r="3.5" /></>,
+  globe: <><circle cx="12" cy="12" r="9" /><path d="M3 12h18" /><path d="M12 3a14 14 0 010 18 14 14 0 010-18z" /></>,
+  card: <><rect x="2" y="5" width="20" height="14" rx="3" /><path d="M2 10h20" /></>,
+  key: <><circle cx="7.5" cy="15.5" r="4.5" /><path d="M11 12l9-9" /><path d="M17 6l3 3" /></>,
+  chart: <path d="M6 20v-6M12 20V8M18 20V4" />,
+  pie: <><path d="M21 12A9 9 0 1112 3v9z" /><path d="M21.5 9A9 9 0 0015 2.5V9h6.5z" /></>,
+  server: <><rect x="2" y="3" width="20" height="7" rx="2" /><rect x="2" y="14" width="20" height="7" rx="2" /><path d="M6 6.5h.01M6 17.5h.01" /></>,
+  flag: <path d="M5 22V4c4-2.5 7 2.5 11 0v10c-4 2.5-7-2.5-11 0" />,
+  eye: <><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></>,
+  menu: <path d="M4 7h16M4 12h16M4 17h16" />,
+  lock: <><rect x="4" y="11" width="16" height="10" rx="3" /><path d="M8 11V7a4 4 0 018 0v4" /></>,
+  mail: <><rect x="2" y="4" width="20" height="16" rx="3" /><path d="M22 7l-10 7L2 7" /></>,
+  trend: <><path d="M22 7l-8.5 8.5-4-4L2 19" /><path d="M16 7h6v6" /></>,
+  instagram: <><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><path d="M17.2 6.8h.01" /></>,
+  alert: <><path d="M12 3l10 18H2L12 3z" /><path d="M12 10v5" /><path d="M12 18h.01" /></>,
+  info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></>
+};
+function Icon({ name, size = 18, sw = 1.8, className = "" }) {
+  const f = FICONS[name];
+  if (f) return <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="none" className={className}>{f}</svg>;
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" className={className}>{ICONS[name] || null}</svg>;
+}
+function Logo({ size = 34, withText = true }) {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 11 }}>
+      <span style={{ width: size, height: size, borderRadius: 12, background: "linear-gradient(135deg,#38bdf8,#8b5cf6)", display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 24px -6px rgba(99,102,241,.7)" }}>
+        <Icon name="sparkles" size={size * 0.55} className="" />
+      </span>
+      {withText && <span className="display" style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-.01em" }}>Text2<span className="grad-text">Motion</span></span>}
+    </span>
+  );
+}
+
+/* ============================== DATA ============================== */
+const STYLES = [
+  { id: "realistic", name: "Realistic", img: IMG.realistic, desc: "True-to-life physics & light" },
+  { id: "cinematic", name: "Cinematic", img: IMG.cinematic, desc: "Film-grade anamorphic look" },
+  { id: "anime", name: "Anime", img: IMG.anime, desc: "Hand-drawn Japanese style" },
+  { id: "cartoon", name: "Cartoon", img: IMG.cartoon, desc: "Bold playful 2D toons" },
+  { id: "pixar", name: "Pixar", img: IMG.pixar, desc: "Heart-warming 3D characters" },
+  { id: "ghibli", name: "Studio Ghibli", img: IMG.ghibli, desc: "Painterly pastoral warmth" },
+  { id: "anim3d", name: "3D Animation", img: IMG.anim3d, desc: "Stylized renders & worlds" },
+  { id: "cyberpunk", name: "Cyberpunk", img: IMG.cyberpunk, desc: "Neon-soaked future noir" },
+  { id: "fantasy", name: "Fantasy", img: IMG.fantasy, desc: "Epic magical matte painting" },
+  { id: "photoreal", name: "Photorealistic", img: IMG.photoreal, desc: "Indistinguishable from camera" }
+];
+const FEATURES = [
+  { i: "film", t: "AI Text to Video", d: "Turn any prompt into a cinematic video with coherent motion and storytelling." },
+  { i: "image", t: "Image to Video", d: "Bring still images to life with natural motion, depth and parallax." },
+  { i: "mic", t: "AI Voice Generation", d: "12 studio-grade neural voices across 9 languages, synced to your scenes." },
+  { i: "subs", t: "Automatic Subtitles", d: "Frame-accurate captions in every language, styled to match your brand." },
+  { i: "music", t: "Background Music", d: "Royalty-free adaptive soundtracks scored to the emotion of each scene." },
+  { i: "layers", t: "Multiple AI Styles", d: "10 curated visual engines from photoreal to Ghibli — one click to switch." },
+  { i: "clock", t: "Video History", d: "Every render saved automatically with full prompt lineage and versions." },
+  { i: "cloud", t: "Cloud Storage", d: "Unlimited encrypted cloud library, synced across all your devices." },
+  { i: "zap", t: "Fast Rendering", d: "Priority GPU queue renders a 60s clip in under two minutes." },
+  { i: "shield", t: "Commercial License", d: "Full ownership of every frame. Use in ads, films and client work." },
+  { i: "download", t: "1080p HD Export", d: "Crisp MP4 exports up to 60fps with clean, watermark-free output." },
+  { i: "share", t: "Social Media Export", d: "One-click presets for YouTube, TikTok, Instagram, Facebook and X." }
+];
+const HOW = [
+  { i: "pencil", t: "Write your prompt", d: "Describe your scene in plain language — mood, camera, lighting included." },
+  { i: "layers", t: "Choose style", d: "Pick from 10 AI visual engines and fine-tune every generation parameter." },
+  { i: "sparkles", t: "Generate AI Video", d: "Our diffusion engine renders cinematic frames with voice, music & captions." },
+  { i: "share", t: "Download & Share", d: "Export 1080p MP4 and publish everywhere with one-click social presets." }
+];
+const TESTIMONIALS = [
+  { n: "Maya Chen", r: "Film Director, Lumen Studio", g: "linear-gradient(135deg,#38bdf8,#6366f1)", q: "Text2Motion replaced our three-week pre-visualization pipeline. I storyboard, generate and pitch to clients in a single afternoon. The cinematic engine is scary good." },
+  { n: "Derek Okafor", r: "Content Creator · 1.2M subs", g: "linear-gradient(135deg,#a855f7,#d946ef)", q: "I went from 2 videos a week to 2 videos a day. The AI voices and auto-subtitles alone save me six hours per upload. My channel grew 4x in four months." },
+  { n: "Sofia Marin", r: "Creative Director, Pixelray", g: "linear-gradient(135deg,#f59e0b,#ef4444)", q: "We shipped an entire animated brand campaign in the Ghibli style without touching a render farm. Clients thought we hired a studio in Tokyo." },
+  { n: "James Park", r: "Founder, Orbit Labs", g: "linear-gradient(135deg,#10b981,#0ea5e9)", q: "The API-first workflow and consistent characters make this the only AI video tool we trust in production. Fast rendering is not a marketing line — it's real." },
+  { n: "Amara Diallo", r: "Marketing Lead, Novabyte", g: "linear-gradient(135deg,#8b5cf6,#38bdf8)", q: "Our ad CTR doubled after switching to Text2Motion creatives. Social export presets mean zero time wasted on reformatting for each platform." },
+  { n: "Lucas Weber", r: "Indie Game Developer", g: "linear-gradient(135deg,#ef4444,#a855f7)", q: "I made my game's entire cinematic trailer from text prompts on the Free plan, then upgraded the same night. Best $29 I spend each month, period." }
+];
+const FAQS = [
+  { q: "How long does it take to generate a video?", a: "A 30-second clip typically renders in 60–120 seconds on the priority queue. Premium members get up to 2.4x faster rendering with dedicated H100 GPU pools, while Free plan renders run on the standard queue." },
+  { q: "Can I use my videos commercially?", a: "Yes. Premium includes a full commercial license — you own every frame and can use videos in ads, client work, films, games and social media. Free plan videos are for personal use and carry a small watermark." },
+  { q: "What video lengths and resolutions are supported?", a: "You can generate 30s, 45s or 60s videos in 16:9, 9:16, 1:1, 4:3 and 21:9 aspect ratios. Free exports at 720p; Premium exports crisp 1080p Full HD at up to 60fps." },
+  { q: "Can I animate my own images?", a: "Absolutely. The Image-to-Video mode lets you upload any image and animate it with adjustable motion intensity and animation strength — perfect for product shots, portraits and artwork." },
+  { q: "Which languages do the AI voices support?", a: "Our neural voice engine supports English, Spanish, French, German, Hindi, Japanese, Korean, Arabic and Portuguese with 12 distinct voice personalities, plus automatic lip-sync and subtitles." },
+  { q: "Is there an API for developers?", a: "Yes — Premium includes REST API access with API keys generated from Settings. Render videos programmatically, webhook callbacks on completion, and SDKs for Node.js and Python are available." },
+  { q: "What is your refund policy?", a: "We offer a no-questions-asked 7-day money-back guarantee on all Premium subscriptions. Cancel anytime from your Subscription page; your videos remain yours forever." }
+];
+const LOGOS = ["VERTEX", "Novabyte", "PIXELRAY", "Orbit Labs", "Lumina", "FRAMEHAUS", "Skyline", "Arcadia"];
+const TEMPLATES = [
+  { t: "Neon City Flythrough", tag: "Trending", styleId: "cyberpunk", p: "FPV drone flight through rain-soaked neon streets, holograms flickering, cinematic cyberpunk, reflections on wet asphalt" },
+  { t: "Ghibli Morning", tag: "Community", styleId: "ghibli", p: "A quiet countryside morning, wind in the grass, a small cottage with smoke rising from the chimney, painterly light" },
+  { t: "Product Hero Reveal", tag: "Marketing", styleId: "cinematic", p: "Luxury product on a black stage, dramatic rim lighting, slow orbit camera, floating dust particles, anamorphic flare" },
+  { t: "Mascot Dance Promo", tag: "Social", styleId: "cartoon", p: "A cheerful fox mascot dancing through a candy-colored city, playful energy, bold outlines, confetti bursts" },
+  { t: "Dragon Reveal", tag: "Epic", styleId: "fantasy", p: "Camera pushes through golden clouds to reveal a dragon circling a glowing crystal castle at dusk" },
+  { t: "Anime Sunset Ride", tag: "Trending", styleId: "anime", p: "Two friends on a coastal train at sunset, lens flare, emotional anime scene, petals drifting past the window" }
+];
+const SEED_VIDEOS = [
+  { id: "v1", prompt: "A cinematic drone shot over a bioluminescent bay at midnight, gentle waves glowing electric blue", styleId: "cinematic", duration: 45, ratio: "16:9", res: "1080p", fps: 30, date: "Aug 6, 2026", size: "84.2", thumb: IMG.cinematic },
+  { id: "v2", prompt: "A golden retriever puppy running through a sunlit meadow in slow motion, dandelions floating", styleId: "realistic", duration: 30, ratio: "16:9", res: "1080p", fps: 60, date: "Aug 4, 2026", size: "61.7", thumb: IMG.realistic },
+  { id: "v3", prompt: "Anime girl on a rooftop watching fireworks bloom over the Tokyo skyline at sunset", styleId: "anime", duration: 30, ratio: "9:16", res: "1080p", fps: 30, date: "Aug 1, 2026", size: "55.3", thumb: IMG.anime },
+  { id: "v4", prompt: "A cute round robot discovering a glowing flower in a post-apocalyptic city", styleId: "pixar", duration: 60, ratio: "16:9", res: "1080p", fps: 24, date: "Jul 28, 2026", size: "112.9", thumb: IMG.pixar },
+  { id: "v5", prompt: "Cozy countryside bakery at dawn, steam rising from fresh bread, curtains in the breeze", styleId: "ghibli", duration: 30, ratio: "16:9", res: "720p", fps: 24, date: "Jul 24, 2026", size: "48.1", thumb: IMG.ghibli },
+  { id: "v6", prompt: "FPV flight through a neon-lit cyberpunk alley in the rain, flying cars overhead", styleId: "cyberpunk", duration: 45, ratio: "21:9", res: "1080p", fps: 30, date: "Jul 19, 2026", size: "92.4", thumb: IMG.cyberpunk },
+  { id: "v7", prompt: "A majestic dragon circling a floating crystal castle as golden particles fill the sky", styleId: "fantasy", duration: 60, ratio: "16:9", res: "1080p", fps: 30, date: "Jul 12, 2026", size: "126.0", thumb: IMG.fantasy },
+  { id: "v8", prompt: "Female pilot in a cockpit during golden hour, photoreal close-up, clouds below", styleId: "photoreal", duration: 30, ratio: "4:3", res: "1080p", fps: 30, date: "Jul 6, 2026", size: "58.8", thumb: IMG.photoreal }
+];
+const GEN_STEPS = ["Analyzing prompt", "Storyboarding scenes", "Generating frames", "Styling & lighting", "Voice, music & subtitles", "Upscale & encode"];
+const STEP_STARTS = [0, 14, 32, 55, 75, 92];
+const DEFAULT_CFG = { prompt: "", style: "cinematic", duration: 30, ratio: "16:9", res: "1080p", fps: 30, lang: "English", voice: "Aria (Female)", subs: true, music: true, camera: "Smooth Dolly", creativity: 70, negative: "" };
+const OPT_LANGS = ["English", "Spanish", "French", "German", "Hindi", "Japanese", "Korean", "Arabic", "Portuguese"];
+const OPT_VOICES = ["Aria (Female)", "Nova (Female)", "Luna (Soft F)", "Atlas (Male)", "Orion (Male)", "Max (Deep M)"];
+const OPT_CAMS = ["Static", "Smooth Dolly", "Orbit 360°", "Crane Up", "Handheld", "FPV Drone", "Slow Push In"];
+const TITLES = { dashboard: "Dashboard", create: "Create Video", i2v: "Image to Video", videos: "My Videos", templates: "Templates", history: "History", downloads: "Downloads", subscription: "Subscription", profile: "Profile", settings: "Settings", admin: "Admin Panel", video: "Generated Video" };
+const WEEK = [{ d: "Mon", v: 14 }, { d: "Tue", v: 22 }, { d: "Wed", v: 18 }, { d: "Thu", v: 31 }, { d: "Fri", v: 27 }, { d: "Sat", v: 38 }, { d: "Sun", v: 45 }];
+const REV = [{ m: "Feb", v: 9.2 }, { m: "Mar", v: 11.8 }, { m: "Apr", v: 14.1 }, { m: "May", v: 16.9 }, { m: "Jun", v: 19.4 }, { m: "Jul", v: 22.2 }, { m: "Aug", v: 24.6 }];
+const USAGE = [{ d: "W1", v: 2100 }, { d: "W2", v: 2650 }, { d: "W3", v: 2400 }, { d: "W4", v: 3200 }, { d: "W5", v: 3800 }, { d: "W6", v: 4600 }];
+const SUBPIE = [{ name: "Free", value: 5214, c: "#64748b" }, { name: "Monthly", value: 2140, c: "#38bdf8" }, { name: "Yearly", value: 860, c: "#a855f7" }];
+const ADMIN_USERS = [
+  { n: "Maya Chen", e: "maya@lumen.studio", plan: "Premium", st: "Active", j: "Jan 2026" },
+  { n: "Derek Okafor", e: "derek@gmail.com", plan: "Free", st: "Active", j: "Mar 2026" },
+  { n: "Sofia Marin", e: "sofia@pixelray.co", plan: "Premium", st: "Active", j: "Feb 2026" },
+  { n: "Tom Alvarez", e: "tom.a@outlook.com", plan: "Free", st: "Suspended", j: "May 2026" },
+  { n: "Aiko Tanaka", e: "aiko@novaframe.jp", plan: "Premium", st: "Active", j: "Jun 2026" },
+  { n: "Liam O'Brien", e: "liam@arcadia.dev", plan: "Premium", st: "Active", j: "Apr 2026" }
+];
+const SERVERS = [
+  { n: "Render Cluster A", r: "us-east-1", load: "62%", s: "Operational" },
+  { n: "Render Cluster B", r: "eu-west-2", load: "48%", s: "Operational" },
+  { n: "GPU Pool — H100", r: "global", load: "81%", s: "High load" },
+  { n: "Storage CDN", r: "edge", load: "23%", s: "Operational" },
+  { n: "Voice Synth API", r: "us-east-1", load: "34%", s: "Operational" }
+];
+const REPORTS = [
+  { t: "Q2 2026 Revenue Report", d: "Jul 4, 2026", s: "PDF · 2.1 MB" },
+  { t: "AI Usage & Compute Audit", d: "Jul 18, 2026", s: "PDF · 4.8 MB" },
+  { t: "Content Moderation Summary", d: "Aug 1, 2026", s: "PDF · 1.2 MB" },
+  { t: "Infrastructure Cost Breakdown", d: "Aug 5, 2026", s: "XLSX · 640 KB" }
+];
+const NOTIFS = [
+  { i: "sparkles", t: "Render finished: “Bioluminescent bay…”", time: "2m ago" },
+  { i: "zap", t: "Priority queue unlocked for your plan", time: "1h ago" },
+  { i: "gift", t: "New style engine: Studio Ghibli v2", time: "1d ago" }
+];
+
+/* ============================== UI PRIMITIVES ============================== */
+function Particles({ n = 26 }) {
+  const ps = useMemo(() => Array.from({ length: n }, () => ({ l: Math.random() * 100, t: Math.random() * 100, s: 2 + Math.random() * 3.5, d: 4 + Math.random() * 6, de: Math.random() * 5, o: 0.2 + Math.random() * 0.55 })), [n]);
+  return <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>{ps.map((p, i) => <span key={i} className="particle" style={{ left: p.l + "%", top: p.t + "%", width: p.s, height: p.s, opacity: p.o, animationDuration: p.d + "s", animationDelay: "-" + p.de + "s" }} />)}</div>;
+}
+const fadeUp = { hidden: { opacity: 0, y: 28 }, show: (i = 0) => ({ opacity: 1, y: 0, transition: { delay: i * 0.07, duration: 0.55, ease: "easeOut" } }) };
+function SectionHead({ kicker, title, sub }) {
+  return (
+    <div style={{ textAlign: "center", marginBottom: 56 }}>
+      <motion.span variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }} className="kicker">{kicker}</motion.span>
+      <motion.h2 variants={fadeUp} custom={1} initial="hidden" whileInView="show" viewport={{ once: true }} className="h2 display">{title}</motion.h2>
+      {sub && <motion.p variants={fadeUp} custom={2} initial="hidden" whileInView="show" viewport={{ once: true }} className="sectionSub">{sub}</motion.p>}
+    </div>
+  );
+}
+function Toggle({ on, onChange }) {
+  return <label className="switch"><input type="checkbox" checked={on} onChange={(e) => onChange(e.target.checked)} /><span className="track" /><span className="thumb" /></label>;
+}
+function ToggleRow({ label, sub, on, onChange }) {
+  return <div className="tRow"><div><div className="tLab">{label}</div>{sub && <div className="tSub">{sub}</div>}</div><Toggle on={on} onChange={onChange} /></div>;
+}
+function Sel({ label, value, onChange, options }) {
+  return (
+    <label className="field"><span className="label">{label}</span>
+      <span className="selectWrap"><select className="input" value={value} onChange={(e) => onChange(e.target.value)}>{options.map((o) => <option key={o} value={o}>{o}</option>)}</select><Icon name="chevD" size={16} /></span>
+    </label>
+  );
+}
+function Chips({ label, value, onChange, items }) {
+  return (
+    <div className="field"><span className="label">{label}</span>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{items.map((it) => <button key={it} className={"chip" + (String(value) === String(it) ? " on" : "")} onClick={() => onChange(it)}>{it}</button>)}</div>
+    </div>
+  );
+}
+function RangeField({ label, value, onChange, min = 0, max = 100, suffix = "%" }) {
+  return (
+    <div className="field"><div style={{ display: "flex", justifyContent: "space-between" }}><span className="label">{label}</span><span className="small" style={{ color: "#7dd3fc", fontWeight: 700 }}>{value}{suffix}</span></div>
+      <input type="range" className="range" min={min} max={max} value={value} style={{ "--fill": ((value - min) / (max - min)) * 100 + "%" }} onChange={(e) => onChange(Number(e.target.value))} />
+    </div>
+  );
+}
+function Meter({ value, max }) {
+  return <div className="meter"><div className="meterFill" style={{ width: Math.min(100, (value / max) * 100) + "%" }} /></div>;
+}
+function Avatar({ name, size = 40, grad }) {
+  const initials = (name || "U U").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  return <span className="avatarG" style={{ width: size, height: size, fontSize: size * 0.38, background: grad || "linear-gradient(135deg,#38bdf8,#a855f7)" }}>{initials}</span>;
+}
+function Modal({ open, onClose, title, children, width = 480 }) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div className="modalBack" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+          <motion.div className="modalCard glass" style={{ maxWidth: width }} initial={{ opacity: 0, scale: 0.92, y: 18 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.94, y: 12 }} transition={{ type: "spring", stiffness: 320, damping: 26 }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+              <h3 className="display" style={{ fontSize: 20, fontWeight: 700 }}>{title}</h3>
+              <button className="iconBtn" onClick={onClose} aria-label="Close"><Icon name="x" size={16} /></button>
+            </div>
+            {children}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+function Toasts({ list }) {
+  return (
+    <div className="toastWrap">
+      <AnimatePresence>
+        {list.map((t) => (
+          <motion.div key={t.id} className="toastItem" initial={{ opacity: 0, x: 60, scale: 0.9 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: 60 }} transition={{ type: "spring", stiffness: 380, damping: 28 }}>
+            <span style={{ color: "#7dd3fc" }}><Icon name={t.icon || "check"} size={17} /></span>{t.msg}
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+}
+function EmptyState({ icon = "film", title, sub, action }) {
+  return (
+    <div className="glass cardPad" style={{ padding: 60, textAlign: "center" }}>
+      <div style={{ width: 64, height: 64, margin: "0 auto 18px", borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(139,92,246,.12)", border: "1px solid rgba(139,92,246,.3)", color: "#a5b4fc" }}><Icon name={icon} size={28} /></div>
+      <h3 className="display" style={{ fontSize: 20, marginBottom: 8 }}>{title}</h3>
+      <p className="muted" style={{ fontSize: 14.5, marginBottom: 22 }}>{sub}</p>
+      {action}
+    </div>
+  );
+}
+function FakePlayer({ src, duration = 30, res = "1080p" }) {
+  const [playing, setPlaying] = useState(false);
+  const [t, setT] = useState(0);
+  useEffect(() => {
+    if (!playing) return;
+    const iv = setInterval(() => setT((x) => (x + 0.1 >= duration ? 0 : x + 0.1)), 100);
+    return () => clearInterval(iv);
+  }, [playing, duration]);
+  const seek = (e) => { const r = e.currentTarget.getBoundingClientRect(); setT(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * duration); };
+  return (
+    <div className={"playerBox" + (playing ? " kb" : "")}>
+      <img src={src} alt="Generated video preview" />
+      {!playing && <button className="playOrb" onClick={() => setPlaying(true)} aria-label="Play"><Icon name="play" size={24} /></button>}
+      <div className="playerBar">
+        <div className="timeline" onClick={seek}><div className="timelineFill" style={{ width: (t / duration) * 100 + "%" }} /></div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button className="iconBtn" onClick={() => setPlaying((p) => !p)} aria-label="Play/Pause"><Icon name={playing ? "pause" : "play"} size={15} /></button>
+          <span className="small" style={{ color: "#c3c9e2", fontVariantNumeric: "tabular-nums" }}>{fmt(t)} / {fmt(duration)}</span>
+          <span style={{ flex: 1 }} />
+          <span className="badge pill-pro"><Icon name="sparkles" size={11} />AI · {res}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+function ChartTip({ active, payload, label }) {
+  if (!active || !payload || !payload.length) return null;
+  return <div style={{ background: "#0b1024", border: "1px solid rgba(255,255,255,.12)", borderRadius: 12, padding: "8px 12px", fontSize: 13, color: "#e6eaf5" }}>{label} · <b style={{ color: "#7dd3fc" }}>{payload[0].value}</b></div>;
+}
+
+/* ============================== LANDING ============================== */
+function Navbar({ onSignIn, onStart }) {
+  const [sc, setSc] = useState(false);
+  useEffect(() => { const f = () => setSc(window.scrollY > 30); f(); window.addEventListener("scroll", f); return () => window.removeEventListener("scroll", f); }, []);
+  return (
+    <nav className={"nav" + (sc ? " scrolled" : "")}>
+      <div className="wrap navInner">
+        <Logo />
+        <div className="navLinks">
+          <a href="#features">Features</a><a href="#styles">Styles</a><a href="#how">How it works</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a>
+        </div>
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <button className="btn btn-ghost btn-sm hide-sm" onClick={onSignIn}>Sign In</button>
+          <button className="btn btn-primary btn-sm" onMouseDown={ripple} onClick={onStart}>Start Free</button>
+        </div>
+      </div>
+    </nav>
+  );
+}
+function Hero({ onStart, onDemo }) {
+  return (
+    <header className="hero">
+      <div className="heroBg" style={{ position: "absolute", inset: 0 }}>
+        <div className="blob b1" /><div className="blob b2" /><div className="blob b3" />
+        <div className="beam" style={{ left: "18%" }} /><div className="beam" style={{ left: "48%", animationDelay: "-3s" }} /><div className="beam" style={{ left: "78%", animationDelay: "-6s" }} />
+        <Particles n={30} />
+      </div>
+      <div className="wrap heroGrid">
+        <div>
+          <motion.span initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="heroBadge"><span className="pulseDot" /> v3.0 — Veo-class diffusion engine is live</motion.span>
+          <motion.h1 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.6 }} className="h1 display">Transform Text Into <span className="grad-text">Stunning AI Videos</span></motion.h1>
+          <motion.p initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.6 }} className="sub">Create cinematic, realistic, anime, cartoon, and Pixar-quality videos from simple text prompts in minutes using advanced AI.</motion.p>
+          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.6 }} className="ctaRow">
+            <button className="btn btn-primary btn-lg" onMouseDown={ripple} onClick={onStart}>Start Creating Free <Icon name="arrowR" size={18} /></button>
+            <button className="btn btn-ghost btn-lg" onClick={onDemo}><Icon name="play" size={16} /> Watch Demo</button>
+          </motion.div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.55 }} className="heroStats">
+            <div className="hStat"><b className="display">2.4M+</b><span>Videos generated</span></div>
+            <div className="hStat"><b className="display">120k</b><span>Active creators</span></div>
+            <div className="hStat"><b className="display">4.9/5</b><span>Average rating</span></div>
+          </motion.div>
+        </div>
+        <motion.div initial={{ opacity: 0, x: 46 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25, duration: 0.7 }} className="mockWrap">
+          <div className="floatCard fc1 glass"><span style={{ color: "#34d399" }}><Icon name="check" size={16} /></span> Render complete · 1080p</div>
+          <div className="floatCard fc2 glass"><span style={{ color: "#7dd3fc" }}><Icon name="mic" size={16} /></span> AI voice synced</div>
+          <div className="floatCard fc3 glass"><span style={{ color: "#fbbf24" }}><Icon name="zap" size={16} /></span> 2.4x priority queue</div>
+          <div className="mock glass">
+            <div className="mockBar"><i style={{ background: "#ff5f57" }} /><i style={{ background: "#febc2e" }} /><i style={{ background: "#28c840" }} /></div>
+            <div className="mockPrompt glass"><span style={{ color: "#a5b4fc" }}><Icon name="sparkles" size={15} /></span><span style={{ flex: 1 }}>A neon fox running through a rainy cyberpunk city, cinematic…</span><span className="chip on" style={{ padding: "5px 12px" }}>Generate</span></div>
+            <div className="mockPreview">
+              <img src={IMG.cyberpunk} alt="AI video preview" />
+              <button className="playOrb" onClick={onDemo} aria-label="Play demo"><Icon name="play" size={24} /></button>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
+              {["Cinematic", "Anime", "Pixar", "Ghibli"].map((s, i) => <span key={s} className={"chip" + (i === 0 ? " on" : "")} style={{ padding: "6px 12px", fontSize: 12 }}>{s}</span>)}
+              <span style={{ flex: 1 }} />
+              <span className="small muted" style={{ alignSelf: "center" }}>00:45 · 16:9 · 60fps</span>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </header>
+  );
+}
+function TrustedBy() {
+  const row = LOGOS.map((l, i) => <span key={l} className="logoItem"><span style={{ width: 8, height: 8, borderRadius: 3, background: "linear-gradient(135deg,#38bdf8,#8b5cf6)" }} />{l}</span>);
+  return (
+    <section style={{ padding: "26px 0 10px" }}>
+      <p className="small" style={{ textAlign: "center", color: "#5d6787", letterSpacing: ".16em", textTransform: "uppercase", fontWeight: 700, marginBottom: 22 }}>Trusted by 120,000+ creators & teams at</p>
+      <div className="marquee"><div className="mTrack">{[...row, ...row]}</div></div>
+    </section>
+  );
+}
+function Features() {
+  return (
+    <section className="section" id="features">
+      <div className="wrap">
+        <SectionHead kicker="Features" title={<>Everything you need to <span className="grad-text">go viral</span></>} sub="A complete AI video studio in your browser — generation, voice, music, captions, storage and export." />
+        <div className="grid4">
+          {FEATURES.map((f, i) => (
+            <motion.div key={f.t} variants={fadeUp} custom={i % 4} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.15 }} className="glass featureCard">
+              <div className="fIcon"><Icon name={f.i} size={22} /></div>
+              <h3 style={{ fontSize: 16.5, fontWeight: 700, marginBottom: 8 }}>{f.t}</h3>
+              <p className="muted" style={{ fontSize: 13.8, lineHeight: 1.65 }}>{f.d}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+function StylesSection({ onUse }) {
+  return (
+    <section className="section" id="styles" style={{ background: "rgba(255,255,255,.014)" }}>
+      <div className="wrap">
+        <SectionHead kicker="AI Styles" title={<>Ten visual engines. <span className="grad-text">Infinite worlds.</span></>} sub="Switch between hand-tuned diffusion engines — every style keeps characters consistent across scenes." />
+        <div className="stylesGrid">
+          {STYLES.map((s, i) => (
+            <motion.button key={s.id} variants={fadeUp} custom={i % 5} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.1 }} className="glass styleCard" onClick={() => onUse(s.id)} whileHover={{ y: -6 }}>
+              <div style={{ position: "relative", overflow: "hidden" }}>
+                <img src={s.img} alt={s.name} loading="lazy" />
+                <span style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(5,8,22,.85), transparent 55%)" }} />
+                <span className="badge pill-pro" style={{ position: "absolute", top: 10, left: 10 }}>{s.name}</span>
+              </div>
+              <div className="styleInfo">
+                <span className="small muted" style={{ textAlign: "left" }}>{s.desc}</span>
+                <span style={{ color: "#7dd3fc", flex: "none" }}><Icon name="arrowR" size={16} /></span>
+              </div>
+            </motion.button>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+function HowItWorks() {
+  return (
+    <section className="section" id="how">
+      <div className="wrap">
+        <SectionHead kicker="How it works" title={<>From idea to film in <span className="grad-text">4 steps</span></>} />
+        <div className="grid4">
+          {HOW.map((h, i) => (
+            <motion.div key={h.t} variants={fadeUp} custom={i} initial="hidden" whileInView="show" viewport={{ once: true }} className="glass stepCard">
+              <div className="stepNum display">{i + 1}</div>
+              <div style={{ color: "#a5b4fc", marginBottom: 12, display: "flex", justifyContent: "center" }}><Icon name={h.i} size={24} /></div>
+              <h3 style={{ fontSize: 16.5, fontWeight: 700, marginBottom: 8 }}>Step {i + 1} · {h.t}</h3>
+              <p className="muted" style={{ fontSize: 13.8, lineHeight: 1.65 }}>{h.d}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+function Pricing({ onChoose }) {
+  const [yearly, setYearly] = useState(false);
+  return (
+    <section className="section" id="pricing" style={{ background: "rgba(255,255,255,.014)" }}>
+      <div className="wrap">
+        <SectionHead kicker="Pricing" title={<>Simple pricing, <span className="grad-text">cinematic value</span></>} sub="Start free forever. Upgrade when you're ready to go unlimited." />
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 44 }}>
+          <div className="glass" style={{ display: "inline-flex", padding: 6, gap: 4, borderRadius: 99 }}>
+            <button className={"chip" + (!yearly ? " on" : "")} style={{ border: "none" }} onClick={() => setYearly(false)}>Monthly</button>
+            <button className={"chip" + (yearly ? " on" : "")} style={{ border: "none" }} onClick={() => setYearly(true)}>Yearly <span style={{ color: "#34d399" }}>−35%</span></button>
+          </div>
+        </div>
+        <div className="grid2" style={{ maxWidth: 880, margin: "0 auto" }}>
+          <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }} className="glass priceCard">
+            <h3 className="display" style={{ fontSize: 20, fontWeight: 700 }}>Free</h3>
+            <div className="priceRow"><b className="display">$0</b><span className="muted">/month</span></div>
+            <p className="small muted">For curious creators exploring AI video.</p>
+            <ul className="checkList">
+              {["3 videos per day", "720p export", "Watermark on videos", "Limited styles", "Community support"].map((x) => <li key={x}><Icon name="check" size={15} />{x}</li>)}
+            </ul>
+            <button className="btn btn-ghost btn-block" onMouseDown={ripple} onClick={() => onChoose("Free")}>Start Free</button>
+          </motion.div>
+          <motion.div variants={fadeUp} custom={1} initial="hidden" whileInView="show" viewport={{ once: true }} className="glass priceCard premium">
+            <span className="popBadge">MOST POPULAR</span>
+            <h3 className="display" style={{ fontSize: 20, fontWeight: 700 }}>Premium</h3>
+            <div className="priceRow"><b className="display grad-text">${yearly ? 19 : 29}</b><span className="muted">/month{yearly && ", billed yearly"}</span></div>
+            <p className="small muted">For professionals & teams shipping real work.</p>
+            <ul className="checkList">
+              {["Unlimited videos", "1080p HD export · 60fps", "2.4x faster generation", "No watermark", "All premium styles", "Full commercial license", "12 AI voices · 9 languages", "Priority GPU queue"].map((x) => <li key={x}><Icon name="check" size={15} />{x}</li>)}
+            </ul>
+            <button className="btn btn-primary btn-block" onMouseDown={ripple} onClick={() => onChoose("Premium")}>Upgrade Now <Icon name="zap" size={16} /></button>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+}
+function Testimonials() {
+  return (
+    <section className="section">
+      <div className="wrap">
+        <SectionHead kicker="Testimonials" title={<>Loved by <span className="grad-text">120,000+ creators</span></>} />
+        <div className="grid3">
+          {TESTIMONIALS.map((t, i) => (
+            <motion.div key={t.n} variants={fadeUp} custom={i % 3} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.15 }} className="glass testCard">
+              <div style={{ display: "flex", gap: 3, color: "#fbbf24", marginBottom: 14 }}>{[0, 1, 2, 3, 4].map((s) => <Icon key={s} name="star" size={14} />)}</div>
+              <p style={{ fontSize: 14.5, lineHeight: 1.7, color: "#c3c9e2", marginBottom: 20 }}>“{t.q}”</p>
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                <Avatar name={t.n} grad={t.g} />
+                <div><div style={{ fontWeight: 700, fontSize: 14.5 }}>{t.n}</div><div className="small muted">{t.r}</div></div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+function FaqSection() {
+  const [open, setOpen] = useState(0);
+  return (
+    <section className="section" id="faq" style={{ background: "rgba(255,255,255,.014)" }}>
+      <div className="wrap" style={{ maxWidth: 820 }}>
+        <SectionHead kicker="FAQ" title={<>Questions, <span className="grad-text">answered</span></>} />
+        {FAQS.map((f, i) => (
+          <motion.div key={f.q} variants={fadeUp} custom={i} initial="hidden" whileInView="show" viewport={{ once: true }} className="faqItem">
+            <button className="faqQ" onClick={() => setOpen(open === i ? -1 : i)}>{f.q}<span style={{ color: "#7dd3fc", transition: "transform .3s", transform: open === i ? "rotate(180deg)" : "none" }}><Icon name="chevD" size={18} /></span></button>
+            <AnimatePresence initial={false}>
+              {open === i && <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3 }}><div className="faqA">{f.a}</div></motion.div>}
+            </AnimatePresence>
+          </motion.div>
+        ))}
+      </div>
+    </section>
+  );
+}
+function CtaBand({ onStart }) {
+  return (
+    <section className="section">
+      <div className="wrap">
+        <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }} className="glass" style={{ padding: "64px 40px", textAlign: "center", position: "relative", overflow: "hidden", border: "1px solid rgba(139,92,246,.35)" }}>
+          <Particles n={14} />
+          <div className="blob b2" style={{ width: 340, height: 340, top: -120, right: -80 }} />
+          <h2 className="h2 display" style={{ marginBottom: 14 }}>Your first AI film is <span className="grad-text">60 seconds away</span></h2>
+          <p className="sectionSub" style={{ margin: "0 auto 30px" }}>Join 120,000+ creators generating cinematic video from text. No credit card required.</p>
+          <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
+            <button className="btn btn-primary btn-lg" onMouseDown={ripple} onClick={onStart}>Start Creating Free <Icon name="arrowR" size={18} /></button>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+function Footer({ onSignIn, onStart }) {
+  const cols = [
+    { h: "Product", l: ["Features", "AI Styles", "Pricing", "Templates", "Changelog"] },
+    { h: "Company", l: ["About", "Careers", "Blog", "Press Kit", "Contact"] },
+    { h: "Resources", l: ["Documentation", "API Reference", "Tutorials", "Community", "Status"] },
+    { h: "Legal", l: ["Privacy", "Terms", "Cookies", "Licenses"] }
+  ];
+  return (
+    <footer className="footer">
+      <div className="wrap">
+        <div className="fGrid">
+          <div>
+            <Logo />
+            <p className="muted" style={{ fontSize: 14, lineHeight: 1.7, margin: "18px 0 22px", maxWidth: 280 }}>The world's most advanced AI text-to-video studio. Cinematic quality, in minutes.</p>
+            <div style={{ display: "flex", gap: 10 }}>
+              {["xlogo", "youtube", "instagram", "github"].map((s) => <button key={s} className="iconBtn" aria-label={s} onClick={onStart}><Icon name={s} size={16} /></button>)}
+            </div>
+          </div>
+          {cols.map((c) => (
+            <div className="fCol" key={c.h}><h4>{c.h}</h4>{c.l.map((x) => <a key={x} onClick={onStart}>{x}</a>)}</div>
+          ))}
+        </div>
+        <div style={{ borderTop: "1px solid rgba(255,255,255,.07)", marginTop: 46, paddingTop: 26, display: "flex", justifyContent: "space-between", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
+          <span className="small muted">© 2026 Text2Motion Inc. All rights reserved.</span>
+          <span className="small muted" style={{ display: "inline-flex", gap: 8, alignItems: "center" }}><span className="pulseDot" /> All systems operational</span>
+        </div>
+      </div>
+    </footer>
+  );
+}
+function Landing({ onSignIn, onStart, onDemo, onUseStyle }) {
+  return (
+    <div>
+      <Navbar onSignIn={onSignIn} onStart={onStart} />
+      <Hero onStart={onStart} onDemo={onDemo} />
+      <TrustedBy />
+      <Features />
+      <StylesSection onUse={onUseStyle} />
+      <HowItWorks />
+      <Pricing onChoose={onStart} />
+      <Testimonials />
+      <FaqSection />
+      <CtaBand onStart={onStart} />
+      <Footer onSignIn={onSignIn} onStart={onStart} />
+    </div>
+  );
+}
+
+/* ============================== AUTH ============================== */
+function OtpInputs({ onChange }) {
+  const [vals, setVals] = useState(Array(6).fill(""));
+  const refs = useRef([]);
+  const set = (i, v) => {
+    v = v.replace(/\D/g, "").slice(-1);
+    const nv = [...vals]; nv[i] = v; setVals(nv);
+    if (v && i < 5) refs.current[i + 1] && refs.current[i + 1].focus();
+    onChange(nv.join(""));
+  };
+  const kd = (i, e) => { if (e.key === "Backspace" && !vals[i] && i > 0) refs.current[i - 1].focus(); };
+  return <div className="otpRow">{vals.map((v, i) => <input key={i} ref={(el) => (refs.current[i] = el)} value={v} onChange={(e) => set(i, e.target.value)} onKeyDown={(e) => kd(i, e)} maxLength={2} inputMode="numeric" aria-label={"Digit " + (i + 1)} />)}</div>;
+}
+function AuthScreen({ mode, setMode, onDone, onBack, toast }) {
+  const [name, setName] = useState(""); const [email, setEmail] = useState(""); const [pass, setPass] = useState("");
+  const [code, setCode] = useState(""); const [err, setErr] = useState(""); const [sent, setSent] = useState(false);
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  const submit = (e) => {
+    e.preventDefault(); setErr("");
+    if (mode !== "forgot" && pass.length < 6) { setErr("Password must be at least 6 characters."); return; }
+    if (!/^\S+@\S+\.\S+$/.test(email)) { setErr("Please enter a valid email address."); return; }
+    if (mode === "signup") { setMode("verify"); toast("Verification code sent to " + email, "mail"); return; }
+    if (mode === "forgot") { setSent(true); return; }
+    onDone(cap(email.split("@")[0].replace(/[._]/g, " ")) + " Creator", email, "Email");
+  };
+  const verify = () => {
+    if (code.length !== 6) { setErr("Enter the 6-digit code (demo: any 6 digits)."); return; }
+    onDone(name ? name : cap(email.split("@")[0].replace(/[._]/g, " ")), email, "Email");
+  };
+  const head = { login: "Welcome back", signup: "Create your studio", forgot: "Reset password", verify: "Verify your email" }[mode];
+  return (
+    <div className="authPage">
+      <div className="blob b1" /><div className="blob b2" /><Particles n={18} />
+      <button className="btn btn-ghost btn-sm" style={{ position: "absolute", top: 24, left: 24, zIndex: 3 }} onClick={onBack}><Icon name="chevL" size={15} /> Back to home</button>
+      <motion.div className="authCard glass" initial={{ opacity: 0, y: 26, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.5 }}>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 22 }}><Logo /></div>
+        <h2 className="display" style={{ fontSize: 26, textAlign: "center", marginBottom: 6 }}>{head}</h2>
+        <p className="muted small" style={{ textAlign: "center", marginBottom: 26 }}>
+          {mode === "login" && "Sign in to continue creating cinematic AI videos."}
+          {mode === "signup" && "Free forever · 3 videos/day · no credit card."}
+          {mode === "forgot" && "We'll email you a secure reset link."}
+          {mode === "verify" && <>We sent a 6-digit code to <b style={{ color: "#7dd3fc" }}>{email || "your email"}</b>. <span className="muted">(Demo: any 6 digits)</span></>}
+        </p>
+        {(mode === "login" || mode === "signup") && (
+          <>
+            <div style={{ display: "grid", gap: 12 }}>
+              <button className="socialBtn" onClick={() => onDone("Alex Morgan", "alex.morgan@gmail.com", "Google")}><Icon name="google" size={17} /> Continue with Google</button>
+              <button className="socialBtn" onClick={() => onDone("Sam Carter", "sam@github.dev", "GitHub")}><Icon name="github" size={17} /> Continue with GitHub</button>
+            </div>
+            <div className="orDiv">OR WITH EMAIL</div>
+          </>
+        )}
+        {mode === "verify" ? (
+          <>
+            <OtpInputs onChange={setCode} />
+            {err && <p className="small" style={{ color: "#fb7185", textAlign: "center", marginBottom: 12 }}>{err}</p>}
+            <button className="btn btn-primary btn-block" onMouseDown={ripple} onClick={verify}><Icon name="shield" size={16} /> Verify & Continue</button>
+            <p className="small muted" style={{ textAlign: "center", marginTop: 16 }}>Didn't get it? <button style={{ color: "#7dd3fc", fontWeight: 600 }} onClick={() => toast("Code re-sent", "mail")}>Resend code</button></p>
+          </>
+        ) : (
+          <form onSubmit={submit}>
+            {mode === "signup" && <label className="field"><span className="label">Full name</span><input className="input" placeholder="Ada Lovelace" value={name} onChange={(e) => setName(e.target.value)} /></label>}
+            <label className="field"><span className="label">Email</span><input className="input" type="email" placeholder="you@studio.com" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+            {mode !== "forgot" && <label className="field"><span className="label">Password</span><input className="input" type="password" placeholder="••••••••" value={pass} onChange={(e) => setPass(e.target.value)} /></label>}
+            {err && <p className="small" style={{ color: "#fb7185", marginBottom: 10 }}>{err}</p>}
+            {sent && mode === "forgot" && <p className="small" style={{ color: "#34d399", marginBottom: 10 }}>✓ Reset link sent! Check your inbox.</p>}
+            {mode === "login" && <div style={{ textAlign: "right", margin: "-6px 0 12px" }}><button type="button" className="small" style={{ color: "#7dd3fc", fontWeight: 600 }} onClick={() => setMode("forgot")}>Forgot password?</button></div>}
+            <button className="btn btn-primary btn-block" type="submit" onMouseDown={ripple}>
+              {mode === "login" ? "Sign In Securely" : mode === "signup" ? "Create Free Account" : "Send Reset Link"} <Icon name="arrowR" size={16} />
+            </button>
+          </form>
+        )}
+        {(mode === "login" || mode === "signup") && (
+          <p className="small muted" style={{ textAlign: "center", marginTop: 20 }}>
+            {mode === "login" ? <>New to Text2Motion? <button style={{ color: "#7dd3fc", fontWeight: 700 }} onClick={() => setMode("signup")}>Create account</button></> : <>Already have an account? <button style={{ color: "#7dd3fc", fontWeight: 700 }} onClick={() => setMode("login")}>Sign in</button></>}
+          </p>
+        )}
+        <p className="small" style={{ color: "#5d6787", textAlign: "center", marginTop: 18, display: "flex", justifyContent: "center", gap: 7, alignItems: "center" }}><Icon name="lock" size={12} /> Supabase Auth · OAuth 2.0 · 256-bit encryption</p>
+      </motion.div>
+    </div>
+  );
+}
+
+/* ============================== GENERATION ============================== */
+function RenderPanel({ gen, onCancel }) {
+  const p = gen.p;
+  const cur = STEP_STARTS.reduce((a, s, i) => (p >= s ? i : a), 0);
+  const eta = Math.max(2, Math.round((100 - p) * 0.55));
+  const style = STYLES.find((s) => s.id === gen.config.style) || STYLES[1];
+  if (gen.phase === "success") {
+    return (
+      <div className="glass renderPanel">
+        <motion.div initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 260, damping: 16 }} className="successCheck"><Icon name="check" size={48} /></motion.div>
+        <h3 className="display" style={{ fontSize: 24, marginBottom: 8 }}>Video rendered!</h3>
+        <p className="muted" style={{ fontSize: 14.5 }}>Encoding final MP4 · opening your player…</p>
+      </div>
+    );
+  }
+  return (
+    <div className="glass renderPanel">
+      <div className="renderOrb"><div className="display" style={{ fontSize: 26, fontWeight: 700 }}>{Math.floor(p)}%</div></div>
+      <h3 className="display" style={{ fontSize: 22, marginBottom: 6 }}>Rendering your masterpiece</h3>
+      <p className="muted small" style={{ marginBottom: 4 }}>{GEN_STEPS[cur]}… · est. {eta}s remaining</p>
+      <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 6 }}>
+        <span className="badge pill-blue">{style.name}</span><span className="badge pill-pro">{gen.config.duration}s</span><span className="badge pill-green">{gen.config.res}</span>
+      </div>
+      <div className="progOuter" style={{ maxWidth: 460, margin: "20px auto 8px" }}><div className="progFill" style={{ width: p + "%" }} /></div>
+      <div className="stepsList">
+        {GEN_STEPS.map((s, i) => (
+          <div key={s} className={"stepItem " + (i < cur || p >= 100 ? "done" : i === cur ? "now" : "")}>
+            <span className="stepDot">{i < cur || p >= 100 ? <Icon name="check" size={12} /> : i + 1}</span>{s}
+          </div>
+        ))}
+      </div>
+      <button className="btn btn-ghost" style={{ marginTop: 26 }} onClick={onCancel}><Icon name="x" size={15} /> Cancel generation</button>
+    </div>
+  );
+}
+
+/* ============================== APP PAGES ============================== */
+function StatCard({ icon, tint, label, value, delta }) {
+  return (
+    <motion.div variants={fadeUp} custom={0} initial="hidden" animate="show" className="glass statCard">
+      <div className="statIcon" style={{ background: tint + "22", color: tint, border: `1px solid ${tint}55` }}><Icon name={icon} size={20} /></div>
+      <span className="small muted">{label}</span>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}><b className="display" style={{ fontSize: 26 }}>{value}</b>{delta && <span className="small" style={{ color: "#34d399", fontWeight: 700 }}>{delta}</span>}</div>
+    </motion.div>
+  );
+}
+function VideoCard({ v, ctx }) {
+  const st = STYLES.find((s) => s.id === v.styleId) || STYLES[0];
+  return (
+    <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.1 }} className="glass videoCard" whileHover={{ y: -5 }}>
+      <div className="thumb" onClick={() => { ctx.setActiveId(v.id); ctx.setTab("video"); }}>
+        <img src={v.thumb} alt={v.prompt} loading="lazy" />
+        <span className="badge pill-pro vTag">{st.name}</span>
+        <span className="vDur">{fmt(v.duration)}</span>
+        <div className="thumbOverlay"><span className="playOrb" style={{ width: 52, height: 52 }}><Icon name="play" size={20} /></span></div>
+      </div>
+      <div className="vMeta">
+        <p style={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.5, marginBottom: 8, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{v.prompt}</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span className="small muted" style={{ flex: 1 }}>{v.date} · {v.res}</span>
+          <button className="iconBtn" style={{ width: 32, height: 32 }} title="Download" onClick={() => ctx.downloadVideo(v.id)}><Icon name="download" size={14} /></button>
+          <button className="iconBtn" style={{ width: 32, height: 32 }} title="Duplicate" onClick={() => ctx.duplicateVideo(v.id)}><Icon name="copy" size={14} /></button>
+          <button className="iconBtn" style={{ width: 32, height: 32, color: "#fb7185" }} title="Delete" onClick={() => ctx.setDelTarget(v.id)}><Icon name="trash" size={14} /></button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+function VideosGrid({ ctx, list, title, sub }) {
+  const [q, setQ] = useState(""); const [fs, setFs] = useState("All styles"); const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [q, fs]);
+  const filtered = list.filter((v) => (fs === "All styles" || v.styleId === fs) && v.prompt.toLowerCase().includes(q.toLowerCase()));
+  const pages = Math.max(1, Math.ceil(filtered.length / 6));
+  const shown = filtered.slice((page - 1) * 6, page * 6);
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16, flexWrap: "wrap", marginBottom: 24 }}>
+        <div><h2 className="display" style={{ fontSize: 26, fontWeight: 700 }}>{title}</h2><p className="muted small" style={{ marginTop: 4 }}>{sub || filtered.length + " videos"}</p></div>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <div className="searchBox" style={{ maxWidth: 260 }}><Icon name="search" size={15} /><input placeholder="Search videos…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+          <span className="selectWrap" style={{ width: 170 }}><select className="input" value={fs} onChange={(e) => setFs(e.target.value)} style={{ padding: "10px 36px 10px 14px" }}><option>All styles</option>{STYLES.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select><Icon name="chevD" size={15} /></span>
+        </div>
+      </div>
+      {shown.length === 0 ? (
+        <EmptyState title="No videos found" sub="Try a different search, or generate something new." action={<button className="btn btn-primary" onClick={() => ctx.setTab("create")}><Icon name="sparkles" size={16} /> Create Video</button>} />
+      ) : (
+        <div className="grid3">{shown.map((v) => <VideoCard key={v.id} v={v} ctx={ctx} />)}</div>
+      )}
+      {pages > 1 && (
+        <div className="pager">
+          <button disabled={page === 1} onClick={() => setPage(page - 1)}><Icon name="chevL" size={15} /></button>
+          {Array.from({ length: pages }, (_, i) => <button key={i} className={page === i + 1 ? "on" : ""} onClick={() => setPage(i + 1)}>{i + 1}</button>)}
+          <button disabled={page === pages} onClick={() => setPage(page + 1)}><Icon name="chevR" size={15} /></button>
+        </div>
+      )}
+    </div>
+  );
+}
+function DashboardHome({ ctx }) {
+  const storage = (ctx.videos.reduce((a, v) => a + parseFloat(v.size || 60), 0) / 1024).toFixed(1);
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap", marginBottom: 26 }}>
+        <div>
+          <h2 className="display" style={{ fontSize: 28, fontWeight: 700 }}>Welcome back, {ctx.user.name.split(" ")[0]} 👋</h2>
+          <p className="muted" style={{ marginTop: 6, fontSize: 14.5 }}>Here's what's happening in your studio today.</p>
+        </div>
+        <button className="btn btn-primary" onMouseDown={ripple} onClick={() => ctx.setTab("create")}><Icon name="sparkles" size={16} /> New Video</button>
+      </div>
+      <div className="grid4" style={{ marginBottom: 26 }}>
+        <StatCard icon="film" tint="#38bdf8" label="Total videos" value={ctx.videos.length} delta="+3 this week" />
+        <StatCard icon="zap" tint="#a855f7" label="Renders this week" value="27" delta="+12%" />
+        <StatCard icon="cloud" tint="#34d399" label="Storage used" value={storage + " GB"} />
+        <StatCard icon="card" tint="#fbbf24" label="Current plan" value={ctx.user.plan} />
+      </div>
+      <div className="grid3" style={{ gridTemplateColumns: "2fr 1fr", alignItems: "stretch" }}>
+        <motion.div variants={fadeUp} initial="hidden" animate="show" className="glass cardPad">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+            <h3 style={{ fontWeight: 700 }}>Rendering activity</h3>
+            <span className="badge pill-blue"><Icon name="trend" size={12} /> +18% vs last week</span>
+          </div>
+          <div style={{ height: 250 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={WEEK}>
+                <defs><linearGradient id="gA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.5} /><stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} /></linearGradient></defs>
+                <CartesianGrid stroke="rgba(255,255,255,.06)" vertical={false} />
+                <XAxis dataKey="d" stroke="#5d6787" tickLine={false} axisLine={false} fontSize={12} />
+                <YAxis stroke="#5d6787" tickLine={false} axisLine={false} fontSize={12} width={30} />
+                <Tooltip content={<ChartTip />} />
+                <Area type="monotone" dataKey="v" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#gA)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {[{ i: "sparkles", t: "Create Video", d: "Text → cinematic video", tab: "create" }, { i: "image", t: "Image to Video", d: "Animate any still", tab: "i2v" }, { i: "layers", t: "Templates", d: "Start from a proven prompt", tab: "templates" }].map((a, i) => (
+            <motion.button key={a.t} variants={fadeUp} custom={i} initial="hidden" animate="show" className="glass cardPad" style={{ textAlign: "left", display: "flex", gap: 14, alignItems: "center", transition: ".25s" }} whileHover={{ x: 5 }} onClick={() => ctx.setTab(a.tab)}>
+              <span className="fIcon" style={{ margin: 0 }}><Icon name={a.i} size={20} /></span>
+              <span style={{ flex: 1 }}><span style={{ display: "block", fontWeight: 700, fontSize: 15 }}>{a.t}</span><span className="small muted">{a.d}</span></span>
+              <Icon name="chevR" size={16} />
+            </motion.button>
+          ))}
+        </div>
+      </div>
+      <h3 style={{ fontWeight: 700, margin: "30px 0 16px" }}>Recent videos</h3>
+      <div className="grid3">{ctx.videos.slice(0, 3).map((v) => <VideoCard key={v.id} v={v} ctx={ctx} />)}</div>
+    </div>
+  );
+}
+function CreatePage({ ctx }) {
+  const c = ctx.cfg; const set = (k, v) => ctx.setCfg((p) => ({ ...p, [k]: v }));
+  if (ctx.gen) return <RenderPanel gen={ctx.gen} onCancel={ctx.cancelGen} />;
+  const styleName = (STYLES.find((s) => s.id === c.style) || STYLES[1]).name;
+  return (
+    <div>
+      <h2 className="display" style={{ fontSize: 26, fontWeight: 700, marginBottom: 6 }}>Create Video</h2>
+      <p className="muted" style={{ fontSize: 14.5, marginBottom: 24 }}>Describe anything. Our diffusion engine films it.</p>
+      <div className="grid3" style={{ gridTemplateColumns: "1.25fr .9fr", alignItems: "start" }}>
+        <div className="glass cardPad">
+          <label className="field">
+            <div style={{ display: "flex", justifyContent: "space-between" }}><span className="label">Prompt</span><span className="small muted">{c.prompt.length}/600</span></div>
+            <textarea className="textarea" maxLength={600} style={{ minHeight: 170 }} placeholder="Describe the video you want to create..." value={c.prompt} onChange={(e) => set("prompt", e.target.value)} />
+          </label>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
+            {["A neon fox running through a rainy cyberpunk city", "A dragon circling a crystal castle at dusk", "Cozy Ghibli bakery at dawn, steam rising"].map((p) => <button key={p} className="chip" style={{ fontSize: 12 }} onClick={() => set("prompt", p)}><Icon name="wand" size={12} /> {p.slice(0, 34)}…</button>)}
+          </div>
+          <label className="field"><span className="label">Negative prompt <span className="muted" style={{ fontWeight: 400 }}>(what to avoid)</span></span><input className="input" placeholder="blurry, distorted faces, watermark, extra limbs" value={c.negative} onChange={(e) => set("negative", e.target.value)} /></label>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 18px" }}>
+            <Sel label="Voice language" value={c.lang} onChange={(v) => set("lang", v)} options={OPT_LANGS} />
+            <Sel label="Voice type" value={c.voice} onChange={(v) => set("voice", v)} options={OPT_VOICES} />
+          </div>
+          <Sel label="Camera movement" value={c.camera} onChange={(v) => set("camera", v)} options={OPT_CAMS} />
+          <RangeField label="Creativity level" value={c.creativity} onChange={(v) => set("creativity", v)} />
+          <ToggleRow label="Automatic subtitles" sub="Frame-accurate captions in your voice language" on={c.subs} onChange={(v) => set("subs", v)} />
+          <ToggleRow label="Background music" sub="Adaptive royalty-free score" on={c.music} onChange={(v) => set("music", v)} />
+          <button className="btn btn-primary btn-lg btn-block" style={{ marginTop: 24 }} onMouseDown={ripple} onClick={() => { if (!c.prompt.trim()) { ctx.toast("Write a prompt first ✍️", "info"); return; } ctx.startGen({ ...c }, "text"); }}>
+            <Icon name="sparkles" size={18} /> Generate Video
+          </button>
+          <p className="small muted" style={{ textAlign: "center", marginTop: 12 }}><Icon name="zap" size={12} /> ~{Math.round(c.duration * 2.1)}s render on your {ctx.user.plan} queue</p>
+        </div>
+        <div className="glass cardPad">
+          <Sel label="AI Style" value={styleName} onChange={(v) => set("style", (STYLES.find((s) => s.name === v) || STYLES[0]).id)} options={STYLES.map((s) => s.name)} />
+          <div style={{ borderRadius: 14, overflow: "hidden", marginBottom: 18, border: "1px solid rgba(255,255,255,.1)" }}><img src={(STYLES.find((s) => s.id === c.style) || STYLES[0]).img} alt="style preview" style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block" }} /></div>
+          <Chips label="Video duration" value={c.duration} onChange={(v) => set("duration", Number(v))} items={[30, 45, 60]} />
+          <Chips label="Aspect ratio" value={c.ratio} onChange={(v) => set("ratio", v)} items={["16:9", "9:16", "1:1", "4:3", "21:9"]} />
+          <Chips label="Resolution" value={c.res} onChange={(v) => set("res", v)} items={["720p", "1080p"]} />
+          <Chips label="Frame rate" value={c.fps} onChange={(v) => set("fps", Number(v))} items={[24, 30, 60]} />
+          <div className="glass" style={{ padding: 14, marginTop: 8, display: "flex", gap: 10, alignItems: "center" }}>
+            <span style={{ color: "#fbbf24" }}><Icon name="zap" size={16} /></span>
+            <span className="small muted">Premium unlocks 4K, longer clips and the priority H100 queue.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+function I2VPage({ ctx }) {
+  const [img, setImg] = useState(null); const [over, setOver] = useState(false);
+  const [strength, setStrength] = useState(65); const [motion, setMotion] = useState(50);
+  const [cam, setCam] = useState("Slow Push In"); const [dur, setDur] = useState(30);
+  const fileRef = useRef(null);
+  const readFile = (f) => { if (!f || !f.type.startsWith("image/")) return; const r = new FileReader(); r.onload = (e) => setImg(e.target.result); r.readAsDataURL(f); };
+  if (ctx.gen) return <RenderPanel gen={ctx.gen} onCancel={ctx.cancelGen} />;
+  return (
+    <div>
+      <h2 className="display" style={{ fontSize: 26, fontWeight: 700, marginBottom: 6 }}>Image to Video</h2>
+      <p className="muted" style={{ fontSize: 14.5, marginBottom: 24 }}>Upload a still — our engine adds depth, motion and life.</p>
+      <div className="grid2" style={{ alignItems: "start" }}>
+        <div>
+          {img ? (
+            <div style={{ position: "relative", borderRadius: 20, overflow: "hidden", border: "1px solid rgba(255,255,255,.12)" }}>
+              <img src={img} alt="Uploaded" style={{ width: "100%", maxHeight: 380, objectFit: "cover", display: "block" }} />
+              <button className="iconBtn" style={{ position: "absolute", top: 12, right: 12, background: "rgba(0,0,0,.55)" }} onClick={() => setImg(null)}><Icon name="trash" size={15} /></button>
+            </div>
+          ) : (
+            <div className={"dropzone" + (over ? " over" : "")} onClick={() => fileRef.current.click()} onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)} onDrop={(e) => { e.preventDefault(); setOver(false); readFile(e.dataTransfer.files[0]); }}>
+              <div style={{ width: 62, height: 62, margin: "0 auto 16px", borderRadius: 18, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(56,189,248,.12)", border: "1px solid rgba(56,189,248,.35)", color: "#7dd3fc" }}><Icon name="upload" size={26} /></div>
+              <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 6 }}>Drag & drop your image</h3>
+              <p className="muted small" style={{ marginBottom: 16 }}>PNG, JPG or WebP · up to 20 MB</p>
+              <button className="btn btn-ghost btn-sm" onClick={(e) => { e.stopPropagation(); fileRef.current.click(); }}><Icon name="image" size={14} /> Browse files</button>
+              <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => readFile(e.target.files[0])} />
+            </div>
+          )}
+        </div>
+        <div className="glass cardPad">
+          <RangeField label="Animation strength" value={strength} onChange={setStrength} />
+          <RangeField label="Motion intensity" value={motion} onChange={setMotion} />
+          <Sel label="Camera preset" value={cam} onChange={setCam} options={OPT_CAMS} />
+          <Chips label="Duration" value={dur} onChange={(v) => setDur(Number(v))} items={[30, 45, 60]} />
+          <button className="btn btn-primary btn-lg btn-block" onMouseDown={ripple} onClick={() => { if (!img) { ctx.toast("Upload an image first 🖼️", "info"); return; } ctx.startGen({ ...ctx.cfg, prompt: "Animated image · " + cam + " · strength " + strength + "%", style: "realistic", duration: dur, camera: cam, srcImg: img }, "image"); }}>
+            <Icon name="wand" size={18} /> Animate Image
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+function VideoPage({ ctx }) {
+  const v = ctx.activeVideo;
+  const [share, setShare] = useState(false);
+  if (!v) return <EmptyState title="No video selected" sub="Generate or pick a video from your library." action={<button className="btn btn-primary" onClick={() => ctx.setTab("videos")}>Open My Videos</button>} />;
+  const st = STYLES.find((s) => s.id === v.styleId) || STYLES[0];
+  return (
+    <div>
+      <button className="btn btn-ghost btn-sm" style={{ marginBottom: 20 }} onClick={() => ctx.setTab("videos")}><Icon name="chevL" size={15} /> Back to library</button>
+      <div className="grid3" style={{ gridTemplateColumns: "1.7fr 1fr", alignItems: "start", gap: 26 }}>
+        <div>
+          <FakePlayer src={v.thumb} duration={Math.min(v.duration, 30)} res={v.res} />
+          <div className="glass cardPad" style={{ marginTop: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 10 }}>
+              <h3 style={{ fontWeight: 700, fontSize: 15 }}>Prompt</h3>
+              <button className="btn btn-ghost btn-sm" onClick={() => ctx.copyText(v.prompt)}><Icon name="copy" size={13} /> Copy Prompt</button>
+            </div>
+            <p className="muted" style={{ fontSize: 14, lineHeight: 1.7 }}>{v.prompt}</p>
+          </div>
+        </div>
+        <div>
+          <h2 className="display" style={{ fontSize: 21, fontWeight: 700, lineHeight: 1.35, marginBottom: 14 }}>{v.prompt.slice(0, 64)}…</h2>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
+            <span className="badge pill-pro">{st.name}</span><span className="badge pill-blue">{v.res} · {v.fps}fps</span><span className="badge pill-green">{v.duration}s · {v.ratio}</span><span className="badge pill-free">{v.size} MB</span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <button className="btn btn-primary btn-block" onMouseDown={ripple} onClick={() => ctx.downloadVideo(v.id)}><Icon name="download" size={16} /> Download MP4</button>
+            <div className="grid2" style={{ gap: 10 }}>
+              <button className="btn btn-ghost" onClick={() => setShare(true)}><Icon name="share" size={15} /> Share</button>
+              <button className="btn btn-ghost" onClick={() => ctx.duplicateVideo(v.id)}><Icon name="copy" size={15} /> Duplicate</button>
+              <button className="btn btn-ghost" onClick={() => ctx.editVideo(v.id)}><Icon name="pencil" size={15} /> Edit</button>
+              <button className="btn btn-ghost" onClick={() => ctx.startGen({ ...DEFAULT_CFG, prompt: v.prompt, style: v.styleId, duration: v.duration }, "text")}><Icon name="refresh" size={15} /> Generate Again</button>
+            </div>
+            <button className="btn btn-danger btn-block" onClick={() => ctx.setDelTarget(v.id)}><Icon name="trash" size={15} /> Delete</button>
+          </div>
+          <div className="glass cardPad" style={{ marginTop: 20 }}>
+            <h4 className="small" style={{ color: "#78829f", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>Generation details</h4>
+            {[["Created", v.date], ["Voice", ctx.cfg.voice], ["Camera", ctx.cfg.camera], ["Storage", "Supabase · encrypted"]].map((r) => <div key={r[0]} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", fontSize: 13.5 }}><span className="muted">{r[0]}</span><span style={{ fontWeight: 600 }}>{r[1]}</span></div>)}
+          </div>
+        </div>
+      </div>
+      <Modal open={share} onClose={() => setShare(false)} title="Share your video">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 10, marginBottom: 18 }}>
+          {[["youtube", "#ff0033"], ["xlogo", "#e6eaf5"], ["instagram", "#d946ef"], ["share", "#38bdf8"], ["globe", "#34d399"]].map((s, i) => (
+            <button key={i} className="iconBtn" style={{ width: "100%", height: 52, color: s[1] }} onClick={() => { ctx.toast("Shared successfully 🎉", "share"); setShare(false); }}><Icon name={s[0]} size={19} /></button>
+          ))}
+        </div>
+        <p className="small muted" style={{ textAlign: "center", marginBottom: 12 }}>YouTube · TikTok · Instagram · Facebook · X</p>
+        <div className="searchBox" style={{ maxWidth: "100%" }}><Icon name="key" size={14} /><input readOnly value={"https://t2m.ai/v/" + v.id} style={{ flex: 1 }} /><button className="btn btn-ghost btn-sm" onClick={() => ctx.copyText("https://t2m.ai/v/" + v.id)}>Copy</button></div>
+      </Modal>
+    </div>
+  );
+}
+function TemplatesPage({ ctx }) {
+  return (
+    <div>
+      <h2 className="display" style={{ fontSize: 26, fontWeight: 700, marginBottom: 6 }}>Templates</h2>
+      <p className="muted" style={{ fontSize: 14.5, marginBottom: 24 }}>Battle-tested prompts from the community. One click to remix.</p>
+      <div className="grid3">
+        {TEMPLATES.map((t, i) => {
+          const st = STYLES.find((s) => s.id === t.styleId);
+          return (
+            <motion.div key={t.t} variants={fadeUp} custom={i % 3} initial="hidden" whileInView="show" viewport={{ once: true }} className="glass videoCard" whileHover={{ y: -5 }}>
+              <div className="thumb"><img src={st.img} alt={t.t} loading="lazy" /><span className="badge pill-green vTag">{t.tag}</span></div>
+              <div className="vMeta">
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>{t.t}</h3>
+                <p className="small muted" style={{ lineHeight: 1.6, marginBottom: 14, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{t.p}</p>
+                <button className="btn btn-primary btn-sm btn-block" onMouseDown={ripple} onClick={() => { ctx.setCfg((c) => ({ ...c, prompt: t.p, style: t.styleId })); ctx.setTab("create"); ctx.toast("Template loaded into editor", "wand"); }}>
+                  <Icon name="wand" size={14} /> Use Template
+                </button>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+function SubscriptionPage({ ctx }) {
+  const [pay, setPay] = useState(null); const [phase, setPhase] = useState("choose");
+  const open = (plan) => { setPay(plan); setPhase("choose"); };
+  const payWith = (gw) => { setPhase("processing"); setTimeout(() => { setPhase("done"); setTimeout(() => { ctx.upgradePlan("Premium " + pay); setPay(null); }, 1400); }, 1600); };
+  return (
+    <div>
+      <h2 className="display" style={{ fontSize: 26, fontWeight: 700, marginBottom: 24 }}>Subscription</h2>
+      <div className="glass cardPad" style={{ display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap", marginBottom: 26, border: "1px solid rgba(139,92,246,.4)" }}>
+        <span className="fIcon" style={{ margin: 0 }}><Icon name="card" size={20} /></span>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <div style={{ fontWeight: 700, fontSize: 16 }}>Current plan: <span className="grad-text">{ctx.user.plan}</span></div>
+          <div className="small muted" style={{ marginTop: 3 }}>{ctx.user.plan.startsWith("Premium") ? "Unlimited renders · 1080p · priority queue" : "3 videos/day · 720p · watermark"}</div>
+        </div>
+        <span className="badge pill-green"><span className="pulseDot" /> Active</span>
+      </div>
+      <div className="grid3">
+        {[{ n: "Free", p: "$0", f: ["3 videos/day", "720p", "Watermark", "Limited styles"] }, { n: "Monthly", p: "$29", f: ["Unlimited videos", "1080p HD · 60fps", "No watermark", "Priority queue", "Commercial license"] }, { n: "Yearly", p: "$19", f: ["Everything in Monthly", "2 months free", "Early access engines", "Dedicated support"] }].map((pl, i) => (
+          <motion.div key={pl.n} variants={fadeUp} custom={i} initial="hidden" whileInView="show" viewport={{ once: true }} className={"glass priceCard" + (pl.n !== "Free" ? " premium" : "")}>
+            {pl.n === "Yearly" && <span className="popBadge">BEST VALUE</span>}
+            <h3 style={{ fontWeight: 700, fontSize: 18 }}>{pl.n === "Free" ? "Free" : "Premium " + pl.n}</h3>
+            <div className="priceRow"><b className="display">{pl.p}</b><span className="muted">/mo</span></div>
+            <ul className="checkList">{pl.f.map((x) => <li key={x}><Icon name="check" size={15} />{x}</li>)}</ul>
+            {pl.n === "Free" ? <button className="btn btn-ghost btn-block" onClick={() => ctx.toast("You can manage downgrades from billing", "info")}>Current tier logic</button> :
+              <button className="btn btn-primary btn-block" onMouseDown={ripple} onClick={() => open(pl.n)}>{ctx.user.plan.includes(pl.n) ? "Current plan" : "Upgrade Now"}</button>}
+          </motion.div>
+        ))}
+      </div>
+      <Modal open={!!pay} onClose={() => setPay(null)} title={"Checkout — Premium " + (pay || "")}>
+        {phase === "choose" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {[["card", "Stripe", "Credit / debit card · Apple Pay"], ["globe", "Flutterwave", "Cards · M-Pesa · mobile money"], ["key", "Paystack", "Cards · bank transfer · USSD"]].map((g) => (
+              <button key={g[1]} className="socialBtn" style={{ justifyContent: "flex-start" }} onClick={() => payWith(g[1])}><span style={{ color: "#7dd3fc" }}><Icon name={g[0]} size={18} /></span><span style={{ flex: 1, textAlign: "left" }}><b>{g[1]}</b><span className="small muted" style={{ display: "block" }}>{g[2]}</span></span><Icon name="chevR" size={15} /></button>
+            ))}
+            <p className="small muted" style={{ textAlign: "center" }}><Icon name="lock" size={12} /> PCI-DSS compliant · 3-D Secure · 7-day guarantee</p>
+          </div>
+        )}
+        {phase === "processing" && <div style={{ textAlign: "center", padding: 30 }}><div className="renderOrb" style={{ width: 90, height: 90 }}><div><Icon name="lock" size={26} /></div></div><p style={{ marginTop: 20, fontWeight: 600 }}>Processing secure payment…</p></div>}
+        {phase === "done" && <div style={{ textAlign: "center", padding: 20 }}><div className="successCheck" style={{ width: 84, height: 84 }}><Icon name="check" size={36} /></div><p style={{ fontWeight: 700, fontSize: 17 }}>Payment successful!</p><p className="small muted">Welcome to Premium 🎉</p></div>}
+      </Modal>
+    </div>
+  );
+}
+function ProfilePage({ ctx }) {
+  const [name, setName] = useState(ctx.user.name);
+  const [del, setDel] = useState(false);
+  const usage = 342; const storage = ctx.videos.reduce((a, v) => a + parseFloat(v.size || 60), 0) / 1024;
+  return (
+    <div>
+      <h2 className="display" style={{ fontSize: 26, fontWeight: 700, marginBottom: 24 }}>Profile</h2>
+      <div className="grid2" style={{ alignItems: "start" }}>
+        <div className="glass cardPad">
+          <div style={{ display: "flex", gap: 18, alignItems: "center", marginBottom: 24 }}>
+            <Avatar name={ctx.user.name} size={72} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: 18 }}>{ctx.user.name}</div>
+              <div className="small muted" style={{ margin: "3px 0 8px" }}>{ctx.user.email}</div>
+              <span className={"badge " + (ctx.user.plan === "Free" ? "pill-free" : "pill-pro")}>{ctx.user.plan}</span>
+            </div>
+            <button className="btn btn-ghost btn-sm" onClick={() => ctx.toast("Avatar upload coming soon", "camera")}><Icon name="camera" size={14} /> Change</button>
+          </div>
+          <label className="field"><span className="label">Username</span><input className="input" value={name} onChange={(e) => setName(e.target.value)} /></label>
+          <label className="field"><span className="label">Email</span><input className="input" value={ctx.user.email} disabled style={{ opacity: 0.6 }} /></label>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button className="btn btn-primary" onMouseDown={ripple} onClick={() => { ctx.setUser((u) => ({ ...u, name })); ctx.toast("Profile updated", "user"); }}>Save Changes</button>
+            <span className="badge pill-green" style={{ alignSelf: "center" }}><Icon name="shield" size={12} /> Verified</span>
+          </div>
+          <div style={{ borderTop: "1px solid rgba(255,255,255,.07)", marginTop: 24, paddingTop: 20 }}>
+            <h4 style={{ fontWeight: 700, marginBottom: 14 }}>Change password</h4>
+            <label className="field"><span className="label">Current password</span><input className="input" type="password" placeholder="••••••••" /></label>
+            <label className="field"><span className="label">New password</span><input className="input" type="password" placeholder="Min 8 characters" /></label>
+            <button className="btn btn-ghost" onClick={() => ctx.toast("Password updated 🔒", "lock")}>Update Password</button>
+          </div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div className="glass cardPad">
+            <h4 style={{ fontWeight: 700, marginBottom: 16 }}>API usage</h4>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, marginBottom: 8 }}><span className="muted">Renders this month</span><b>{usage} / {ctx.user.plan === "Free" ? 1000 : "∞"}</b></div>
+            <Meter value={usage} max={1000} />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, margin: "18px 0 8px" }}><span className="muted">Cloud storage</span><b>{storage.toFixed(1)} / 10 GB</b></div>
+            <Meter value={storage} max={10} />
+          </div>
+          <div className="glass cardPad">
+            <h4 style={{ fontWeight: 700, marginBottom: 8 }}>Subscription</h4>
+            <p className="small muted" style={{ marginBottom: 14 }}>Manage plans, billing and payment methods.</p>
+            <button className="btn btn-ghost btn-sm" onClick={() => ctx.setTab("subscription")}><Icon name="card" size={14} /> Manage subscription</button>
+          </div>
+          <div className="glass cardPad" style={{ border: "1px solid rgba(244,63,94,.35)" }}>
+            <h4 style={{ fontWeight: 700, color: "#fb7185", marginBottom: 8, display: "flex", gap: 8, alignItems: "center" }}><Icon name="alert" size={16} /> Danger zone</h4>
+            <p className="small muted" style={{ marginBottom: 14 }}>Deleting your account removes all videos, history and data permanently.</p>
+            <button className="btn btn-danger btn-sm" onClick={() => setDel(true)}><Icon name="trash" size={14} /> Delete Account</button>
+          </div>
+        </div>
+      </div>
+      <Modal open={del} onClose={() => setDel(false)} title="Delete account?">
+        <p className="muted" style={{ fontSize: 14.5, lineHeight: 1.7, marginBottom: 22 }}>This action is <b style={{ color: "#fb7185" }}>permanent</b>. All {ctx.videos.length} videos, prompts and settings will be erased from our servers within 24 hours.</p>
+        <div style={{ display: "flex", gap: 12 }}>
+          <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setDel(false)}>Keep my account</button>
+          <button className="btn btn-danger" style={{ flex: 1 }} onClick={() => { setDel(false); ctx.logout(true); }}><Icon name="trash" size={15} /> Delete forever</button>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+function SettingsPage({ ctx }) {
+  const [s, setS] = useState({ theme: "Dark", lang: "English", nR: true, nP: true, nT: false, pub: false, analytics: true, g: true, gh: false });
+  const [keys, setKeys] = useState([{ id: "k1", k: "sk_live_t2m_Xf92hKpQ7wLm3nR8vB21", c: "Created Jul 12, 2026" }]);
+  const set = (k, v) => setS((p) => ({ ...p, [k]: v }));
+  return (
+    <div>
+      <h2 className="display" style={{ fontSize: 26, fontWeight: 700, marginBottom: 24 }}>Settings</h2>
+      <div className="grid2" style={{ alignItems: "start" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div className="glass cardPad">
+            <h4 style={{ fontWeight: 700, marginBottom: 14 }}>Appearance & language</h4>
+            <Sel label="Theme" value={s.theme} onChange={(v) => set("theme", v)} options={["Dark", "Midnight OLED", "System"]} />
+            <Sel label="Language" value={s.lang} onChange={(v) => set("lang", v)} options={OPT_LANGS} />
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><span className="label" style={{ alignSelf: "center", marginRight: 6 }}>Accent</span>{["#38bdf8", "#8b5cf6", "#d946ef", "#34d399", "#fbbf24"].map((c, i) => <button key={c} className={"chip" + (i === 1 ? " on" : "")} style={{ padding: 8, background: c + "22", borderColor: c }} onClick={() => ctx.toast("Accent updated", "sliders")} aria-label={c} />)}</div>
+          </div>
+          <div className="glass cardPad">
+            <h4 style={{ fontWeight: 700, marginBottom: 6 }}>Notifications</h4>
+            <ToggleRow label="Render completions" sub="Notify me when a video finishes" on={s.nR} onChange={(v) => set("nR", v)} />
+            <ToggleRow label="Product updates" sub="New styles, engines and features" on={s.nP} onChange={(v) => set("nP", v)} />
+            <ToggleRow label="Weekly tips" sub="Prompting tips from top creators" on={s.nT} onChange={(v) => set("nT", v)} />
+          </div>
+          <div className="glass cardPad">
+            <h4 style={{ fontWeight: 700, marginBottom: 6 }}>Privacy</h4>
+            <ToggleRow label="Public profile" sub="Allow others to see your showcase" on={s.pub} onChange={(v) => set("pub", v)} />
+            <ToggleRow label="Usage analytics" sub="Help improve Text2Motion" on={s.analytics} onChange={(v) => set("analytics", v)} />
+          </div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div className="glass cardPad">
+            <h4 style={{ fontWeight: 700, marginBottom: 14 }}>Billing</h4>
+            <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 14 }}><span className="fIcon" style={{ margin: 0 }}><Icon name="card" size={18} /></span><div style={{ flex: 1 }}><div style={{ fontWeight: 600, fontSize: 14.5 }}>Visa •••• 4242</div><div className="small muted">Expires 08/28 · Default</div></div><span className="badge pill-green">Active</span></div>
+            <button className="btn btn-ghost btn-sm" onClick={() => ctx.setTab("subscription")}><Icon name="card" size={14} /> Manage billing</button>
+          </div>
+          <div className="glass cardPad">
+            <h4 style={{ fontWeight: 700, marginBottom: 12 }}>Connected accounts</h4>
+            <ToggleRow label="Google" sub="alex.morgan@gmail.com" on={s.g} onChange={(v) => { set("g", v); ctx.toast(v ? "Google connected" : "Google disconnected", "globe"); }} />
+            <ToggleRow label="GitHub" sub="Sync prompts & templates" on={s.gh} onChange={(v) => { set("gh", v); ctx.toast(v ? "GitHub connected" : "GitHub disconnected", "github"); }} />
+          </div>
+          <div className="glass cardPad">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <h4 style={{ fontWeight: 700 }}>API keys</h4>
+              <button className="btn btn-primary btn-sm" onMouseDown={ripple} onClick={() => { setKeys((k) => [{ id: uid(), k: "sk_live_t2m_" + uid() + uid(), c: "Created Aug 8, 2026" }, ...k]); ctx.toast("New API key generated", "key"); }}><Icon name="plus" size={14} /> New key</button>
+            </div>
+            {keys.map((k) => (
+              <div key={k.id} style={{ display: "flex", gap: 10, alignItems: "center", padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
+                <span style={{ color: "#7dd3fc" }}><Icon name="key" size={15} /></span>
+                <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontFamily: "monospace" }}>{k.k.slice(0, 18)}••••</div><div className="small muted">{k.c}</div></div>
+                <button className="iconBtn" style={{ width: 32, height: 32 }} onClick={() => ctx.copyText(k.k)}><Icon name="copy" size={13} /></button>
+                <button className="iconBtn" style={{ width: 32, height: 32, color: "#fb7185" }} onClick={() => { setKeys((ks) => ks.filter((x) => x.id !== k.id)); ctx.toast("Key revoked", "trash"); }}><Icon name="trash" size={13} /></button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+function AdminPage({ ctx }) {
+  const [tab, setTab] = useState("overview");
+  const [users, setUsers] = useState(ADMIN_USERS);
+  const [queue, setQueue] = useState([
+    { id: 1, u: "@neon_dreamer", p: "Replica of a trademarked superhero character fighting…", r: "IP concern", img: IMG.cyberpunk },
+    { id: 2, u: "@fastcash22", p: "Misleading financial-ad video with fake celebrity voice", r: "Misinformation", img: IMG.photoreal },
+    { id: 3, u: "@studio_k", p: "Dark fantasy battle scene with stylized combat", r: "Violence (auto-flag)", img: IMG.fantasy }
+  ]);
+  const tabs = [["overview", "chart"], ["users", "users"], ["revenue", "trend"], ["subs", "pie"], ["usage", "zap"], ["servers", "server"], ["reports", "flag"], ["moderation", "shield"]];
+  return (
+    <div>
+      <h2 className="display" style={{ fontSize: 26, fontWeight: 700, marginBottom: 20 }}>Admin Panel</h2>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 26 }}>
+        {tabs.map((t) => <button key={t[0]} className={"chip" + (tab === t[0] ? " on" : "")} onClick={() => setTab(t[0])}><Icon name={t[1]} size={13} /> {t[0][0].toUpperCase() + t[0].slice(1)}</button>)}
+      </div>
+      {tab === "overview" && (
+        <div>
+          <div className="grid4" style={{ marginBottom: 24 }}>
+            <StatCard icon="users" tint="#38bdf8" label="Total users" value="8,214" delta="+312 this week" />
+            <StatCard icon="trend" tint="#34d399" label="MRR" value="$24.6k" delta="+11%" />
+            <StatCard icon="zap" tint="#a855f7" label="Renders today" value="12,483" />
+            <StatCard icon="server" tint="#fbbf24" label="GPU load" value="62%" />
+          </div>
+          <div className="grid2">
+            <div className="glass cardPad"><h4 style={{ fontWeight: 700, marginBottom: 16 }}>Revenue ($k)</h4><div style={{ height: 240 }}><ResponsiveContainer><BarChart data={REV}><CartesianGrid stroke="rgba(255,255,255,.06)" vertical={false} /><XAxis dataKey="m" stroke="#5d6787" tickLine={false} axisLine={false} fontSize={12} /><YAxis stroke="#5d6787" tickLine={false} axisLine={false} fontSize={12} width={30} /><Tooltip content={<ChartTip />} /><Bar dataKey="v" fill="#8b5cf6" radius={[6, 6, 0, 0]} /></BarChart></ResponsiveContainer></div></div>
+            <div className="glass cardPad"><h4 style={{ fontWeight: 700, marginBottom: 16 }}>Generations / week</h4><div style={{ height: 240 }}><ResponsiveContainer><AreaChart data={USAGE}><defs><linearGradient id="gU" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#38bdf8" stopOpacity={0.5} /><stop offset="100%" stopColor="#38bdf8" stopOpacity={0} /></linearGradient></defs><CartesianGrid stroke="rgba(255,255,255,.06)" vertical={false} /><XAxis dataKey="d" stroke="#5d6787" tickLine={false} axisLine={false} fontSize={12} /><YAxis stroke="#5d6787" tickLine={false} axisLine={false} fontSize={12} width={40} /><Tooltip content={<ChartTip />} /><Area type="monotone" dataKey="v" stroke="#38bdf8" strokeWidth={2.5} fill="url(#gU)" /></AreaChart></ResponsiveContainer></div></div>
+          </div>
+        </div>
+      )}
+      {tab === "users" && (
+        <div className="glass" style={{ overflow: "auto" }}>
+          <table className="table"><thead><tr><th>User</th><th>Plan</th><th>Status</th><th>Joined</th><th style={{ textAlign: "right" }}>Actions</th></tr></thead>
+            <tbody>{users.map((u, i) => (
+              <tr key={u.e}><td><div style={{ display: "flex", gap: 10, alignItems: "center" }}><Avatar name={u.n} size={32} /><div><div style={{ fontWeight: 600, color: "#e6eaf5" }}>{u.n}</div><div className="small muted">{u.e}</div></div></div></td>
+                <td><span className={"badge " + (u.plan === "Free" ? "pill-free" : "pill-pro")}>{u.plan}</span></td>
+                <td><span className={"badge " + (u.st === "Active" ? "pill-green" : "pill-red")}>{u.st}</span></td>
+                <td>{u.j}</td>
+                <td style={{ textAlign: "right" }}>
+                  <button className="btn btn-ghost btn-sm" style={{ marginRight: 8 }} onClick={() => setUsers((us) => us.map((x, j) => (j === i ? { ...x, plan: x.plan === "Free" ? "Premium" : "Free" } : x)))}>Toggle plan</button>
+                  <button className="btn btn-danger btn-sm" onClick={() => setUsers((us) => us.map((x, j) => (j === i ? { ...x, st: x.st === "Active" ? "Suspended" : "Active" } : x)))}>{u.st === "Active" ? "Suspend" : "Restore"}</button>
+                </td></tr>))}</tbody></table>
+        </div>
+      )}
+      {tab === "revenue" && (
+        <div className="glass cardPad"><h4 style={{ fontWeight: 700, marginBottom: 16 }}>Monthly recurring revenue</h4><div style={{ height: 320 }}><ResponsiveContainer><BarChart data={REV}><CartesianGrid stroke="rgba(255,255,255,.06)" vertical={false} /><XAxis dataKey="m" stroke="#5d6787" tickLine={false} axisLine={false} fontSize={12} /><YAxis stroke="#5d6787" tickLine={false} axisLine={false} fontSize={12} width={34} /><Tooltip content={<ChartTip />} /><Bar dataKey="v" fill="#38bdf8" radius={[8, 8, 0, 0]} /></BarChart></ResponsiveContainer></div></div>
+      )}
+      {tab === "subs" && (
+        <div className="grid2">
+          <div className="glass cardPad"><h4 style={{ fontWeight: 700, marginBottom: 10 }}>Plan distribution</h4><div style={{ height: 280 }}><ResponsiveContainer><PieChart><Pie data={SUBPIE} dataKey="value" nameKey="name" innerRadius={62} outerRadius={95} paddingAngle={4} stroke="none">{SUBPIE.map((s) => <Cell key={s.name} fill={s.c} />)}</Pie><Tooltip content={<ChartTip />} /></PieChart></ResponsiveContainer></div></div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>{SUBPIE.map((s) => <div key={s.name} className="glass cardPad" style={{ display: "flex", alignItems: "center", gap: 12 }}><span style={{ width: 12, height: 12, borderRadius: 4, background: s.c }} /><b style={{ flex: 1 }}>{s.name}</b><span className="muted">{s.value.toLocaleString()} users</span></div>)}</div>
+        </div>
+      )}
+      {tab === "usage" && (
+        <div className="glass cardPad"><h4 style={{ fontWeight: 700, marginBottom: 16 }}>AI compute usage</h4><div style={{ height: 300 }}><ResponsiveContainer><AreaChart data={USAGE}><defs><linearGradient id="gU2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#a855f7" stopOpacity={0.5} /><stop offset="100%" stopColor="#a855f7" stopOpacity={0} /></linearGradient></defs><CartesianGrid stroke="rgba(255,255,255,.06)" vertical={false} /><XAxis dataKey="d" stroke="#5d6787" tickLine={false} axisLine={false} fontSize={12} /><YAxis stroke="#5d6787" tickLine={false} axisLine={false} fontSize={12} width={40} /><Tooltip content={<ChartTip />} /><Area type="monotone" dataKey="v" stroke="#a855f7" strokeWidth={2.5} fill="url(#gU2)" /></AreaChart></ResponsiveContainer></div></div>
+      )}
+      {tab === "servers" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {SERVERS.map((s) => <div key={s.n} className="glass cardPad" style={{ display: "flex", alignItems: "center", gap: 14 }}><span className="fIcon" style={{ margin: 0 }}><Icon name="server" size={18} /></span><div style={{ flex: 1 }}><div style={{ fontWeight: 700, fontSize: 14.5 }}>{s.n}</div><div className="small muted">{s.r} · load {s.load}</div></div><span className={"badge " + (s.s === "Operational" ? "pill-green" : "pill-red")}><span className="pulseDot" /> {s.s}</span></div>)}
+        </div>
+      )}
+      {tab === "reports" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {REPORTS.map((r) => <div key={r.t} className="glass cardPad" style={{ display: "flex", alignItems: "center", gap: 14 }}><span className="fIcon" style={{ margin: 0 }}><Icon name="flag" size={18} /></span><div style={{ flex: 1 }}><div style={{ fontWeight: 700, fontSize: 14.5 }}>{r.t}</div><div className="small muted">{r.d} · {r.s}</div></div><button className="btn btn-ghost btn-sm" onClick={() => ctx.toast("Report download started", "download")}><Icon name="download" size={14} /> Download</button></div>)}
+        </div>
+      )}
+      {tab === "moderation" && (
+        queue.length === 0 ? <EmptyState icon="shield" title="Queue clear 🎉" sub="No flagged generations awaiting review." /> :
+        <div className="grid3">{queue.map((m) => (
+          <div key={m.id} className="glass videoCard">
+            <div className="thumb"><img src={m.img} alt="flagged" /><span className="badge pill-red vTag">{m.r}</span></div>
+            <div className="vMeta"><div className="small" style={{ color: "#7dd3fc", marginBottom: 6 }}>{m.u}</div><p className="small muted" style={{ lineHeight: 1.6, marginBottom: 14 }}>{m.p}</p>
+              <div style={{ display: "flex", gap: 8 }}><button className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={() => { setQueue((q) => q.filter((x) => x.id !== m.id)); ctx.toast("Approved", "check"); }}><Icon name="check" size={13} /> Approve</button><button className="btn btn-danger btn-sm" style={{ flex: 1 }} onClick={() => { setQueue((q) => q.filter((x) => x.id !== m.id)); ctx.toast("Removed & user warned", "trash"); }}><Icon name="trash" size={13} /> Remove</button></div></div>
+          </div>))}</div>
+      )}
+    </div>
+  );
+}
+
+/* ============================== SHELL ============================== */
+const NAVI = [
+  { sec: "Studio", items: [["dashboard", "Dashboard", "grid"], ["create", "Create Video", "sparkles"], ["i2v", "Image to Video", "image"], ["videos", "My Videos", "film"], ["templates", "Templates", "layers"], ["history", "History", "clock"], ["downloads", "Downloads", "download"]] },
+  { sec: "Account", items: [["subscription", "Subscription", "card"], ["profile", "Profile", "user"], ["settings", "Settings", "sliders"], ["admin", "Admin Panel", "shield"]] }
+];
+function Sidebar({ tab, setTab, user, open, setOpen, logout }) {
+  return (
+    <aside className={"sidebar" + (open ? " open" : "")}>
+      <div style={{ padding: "4px 10px 10px" }}><Logo /></div>
+      {NAVI.map((g) => (
+        <div key={g.sec}>
+          <div className="sideSec">{g.sec}</div>
+          {g.items.map((it) => (
+            <button key={it[0]} className={"sideLink" + (tab === it[0] ? " active" : "")} onClick={() => { setTab(it[0]); setOpen(false); }}>
+              <Icon name={it[2]} size={17} /> {it[1]}
+            </button>
+          ))}
+        </div>
+      ))}
+      <div style={{ marginTop: "auto", paddingTop: 18 }}>
+        <div className="glass" style={{ padding: 14, display: "flex", gap: 11, alignItems: "center", marginBottom: 12 }}>
+          <Avatar name={user.name} size={36} />
+          <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user.name}</div><div className="small muted">{user.plan}</div></div>
+        </div>
+        <button className="sideLink" style={{ color: "#fb7185" }} onClick={logout}><Icon name="logout" size={17} /> Logout</button>
+      </div>
+    </aside>
+  );
+}
+function Topbar({ title, user, setSideOpen, setTab, toast, logout }) {
+  const [bell, setBell] = useState(false); const [menu, setMenu] = useState(false);
+  return (
+    <div className="topbar">
+      <button className="iconBtn hide-md" style={{ display: "none" }} aria-label="menu" />
+      <button className="iconBtn" style={{ display: "none" }} />
+      <button className="iconBtn md-menu" style={{}} onClick={() => setSideOpen(true)} aria-label="Open menu"><Icon name="menu" size={18} /></button>
+      <h1 className="display" style={{ fontSize: 19, fontWeight: 700 }}>{title}</h1>
+      <span style={{ flex: 1 }} />
+      <div className="searchBox hide-md"><Icon name="search" size={15} /><input placeholder="Search your studio…" onKeyDown={(e) => { if (e.key === "Enter") toast("Library search activated", "search"); }} /></div>
+      <div style={{ position: "relative" }}>
+        <button className="iconBtn" onClick={() => { setBell(!bell); setMenu(false); }} aria-label="Notifications"><Icon name="bell" size={17} /><span style={{ position: "absolute", top: 8, right: 9, width: 7, height: 7, borderRadius: 50, background: "#d946ef" }} /></button>
+        <AnimatePresence>{bell && (
+          <motion.div className="notif glass" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}>
+            <div style={{ padding: "10px 14px", fontWeight: 700, fontSize: 14 }}>Notifications</div>
+            {NOTIFS.map((n, i) => <div key={i} className="notifItem"><span style={{ color: "#7dd3fc", marginTop: 2 }}><Icon name={n.i === "gift" ? "sparkles" : n.i} size={16} /></span><div><div style={{ fontSize: 13.5, lineHeight: 1.45 }}>{n.t}</div><div className="small muted" style={{ marginTop: 2 }}>{n.time}</div></div></div>)}
+          </motion.div>)}</AnimatePresence>
+      </div>
+      {user.plan === "Free" && <button className="btn btn-primary btn-sm hide-sm" onMouseDown={ripple} onClick={() => setTab("subscription")}><Icon name="zap" size={14} /> Upgrade</button>}
+      <div style={{ position: "relative" }}>
+        <button onClick={() => { setMenu(!menu); setBell(false); }} aria-label="Account menu"><Avatar name={user.name} size={38} /></button>
+        <AnimatePresence>{menu && (
+          <motion.div className="notif glass" style={{ width: 210 }} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}>
+            <div style={{ padding: "12px 14px", borderBottom: "1px solid rgba(255,255,255,.08)" }}><div style={{ fontWeight: 700, fontSize: 14 }}>{user.name}</div><div className="small muted">{user.email}</div></div>
+            {[["profile", "user", "Profile"], ["settings", "sliders", "Settings"], ["logout", "logout", "Logout"]].map((m) => <button key={m[0]} className="notifItem" style={{ width: "100%", color: m[0] === "logout" ? "#fb7185" : "inherit" }} onClick={() => { setMenu(false); m[0] === "logout" ? logout() : setTab(m[0]); }}><Icon name={m[1]} size={16} /> {m[2]}</button>)}
+          </motion.div>)}</AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+/* ============================== ROOT ============================== */
+export default function App() {
+  const [view, setView] = useState("landing");
+  const [authMode, setAuthMode] = useState("login");
+  const [user, setUser] = useState(null);
+  const [tab, setTab] = useState("dashboard");
+  const [videos, setVideos] = useState(SEED_VIDEOS);
+  const [downloads, setDownloads] = useState(["v2", "v5"]);
+  const [gen, setGen] = useState(null);
+  const [activeId, setActiveId] = useState(null);
+  const [toasts, setToasts] = useState([]);
+  const [demoOpen, setDemoOpen] = useState(false);
+  const [cfg, setCfg] = useState({ ...DEFAULT_CFG });
+  const [sideOpen, setSideOpen] = useState(false);
+  const [delTarget, setDelTarget] = useState(null);
+  const genTimer = useRef(null);
+  const styleIntent = useRef(false);
+
+  const toast = (msg, icon = "check") => { const id = uid(); setToasts((t) => [...t, { id, msg, icon }]); setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3400); };
+  const startGen = (config, src) => {
+    clearInterval(genTimer.current);
+    setGen({ p: 0, phase: "rendering", config, src });
+    genTimer.current = setInterval(() => {
+      setGen((g) => {
+        if (!g || g.phase !== "rendering") return g;
+        const np = Math.min(100, g.p + 0.9 + Math.random() * 2.4);
+        if (np >= 100) { clearInterval(genTimer.current); return { ...g, p: 100, phase: "success" }; }
+        return { ...g, p: np };
+      });
+    }, 130);
+  };
+  const cancelGen = () => { clearInterval(genTimer.current); setGen(null); toast("Generation cancelled", "x"); };
+  useEffect(() => {
+    if (gen && gen.phase === "success") {
+      const t = setTimeout(() => {
+        const c = gen.config; const st = STYLES.find((s) => s.id === c.style) || STYLES[1];
+        const nv = { id: uid(), prompt: c.prompt || "Untitled masterpiece", styleId: c.style, duration: c.duration || 30, ratio: c.ratio || "16:9", res: c.res || "1080p", fps: c.fps || 30, date: "Just now", size: (40 + Math.random() * 80).toFixed(1), thumb: c.srcImg || st.img };
+        setVideos((v) => [nv, ...v]); setActiveId(nv.id); setGen(null); setTab("video");
+        toast("Your AI video is ready 🎬", "sparkles");
+      }, 1900);
+      return () => clearTimeout(t);
+    }
+  }, [gen && gen.phase]);
+  useEffect(() => () => clearInterval(genTimer.current), []);
+
+  const authDone = (name, email, provider) => {
+    setUser({ name, email, plan: "Free", joined: "Aug 2026", provider });
+    setView("app"); setTab(styleIntent.current ? "create" : "dashboard"); styleIntent.current = false;
+    window.scrollTo(0, 0); toast("Welcome, " + name.split(" ")[0] + "! ✨");
+  };
+  const logout = (silent) => { setUser(null); setView("landing"); setGen(null); clearInterval(genTimer.current); window.scrollTo(0, 0); if (!silent) toast("Signed out. See you soon 👋"); };
+  const deleteVideo = (id) => { setVideos((v) => v.filter((x) => x.id !== id)); if (activeId === id) { setActiveId(null); setTab("videos"); } setDelTarget(null); toast("Video deleted", "trash"); };
+  const duplicateVideo = (id) => { const v = videos.find((x) => x.id === id); if (!v) return; setVideos((x) => [{ ...v, id: uid(), date: "Just now" }, ...x]); toast("Video duplicated", "copy"); };
+  const downloadVideo = (id) => { setDownloads((d) => d.includes(id) ? d : [id, ...d]); toast("Export started — MP4 downloading", "download"); };
+  const editVideo = (id) => { const v = videos.find((x) => x.id === id); if (!v) return; setCfg((c) => ({ ...c, prompt: v.prompt, style: v.styleId })); setTab("create"); toast("Loaded into editor", "pencil"); };
+  const copyText = (t) => { try { navigator.clipboard && navigator.clipboard.writeText(t); } catch (e) { } toast("Copied to clipboard", "copy"); };
+  const upgradePlan = (plan) => { setUser((u) => ({ ...u, plan })); toast("Upgraded to " + plan + " 🎉", "zap"); };
+
+  const ctx = { user, setUser, tab, setTab, videos, downloads, toast, cfg, setCfg, gen, startGen, cancelGen, activeId, setActiveId, activeVideo: videos.find((v) => v.id === activeId), deleteVideo, duplicateVideo, downloadVideo, editVideo, copyText, upgradePlan, logout, setDelTarget };
+
+  const goStart = () => { if (user) { setView("app"); setTab("create"); } else { setAuthMode("signup"); setView("auth"); } };
+
+  return (
+    <>
+      <style>{CSS}</style>
+      <AnimatePresence mode="wait">
+        {view === "landing" && (
+          <motion.div key="landing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -14 }} transition={{ duration: 0.4 }}>
+            <Landing onSignIn={() => { setAuthMode("login"); setView("auth"); }} onStart={goStart} onDemo={() => setDemoOpen(true)} onUseStyle={(id) => { setCfg((c) => ({ ...c, style: id })); styleIntent.current = true; if (user) { setView("app"); setTab("create"); } else { setAuthMode("signup"); setView("auth"); } }} />
+          </motion.div>
+        )}
+        {view === "auth" && (
+          <motion.div key="auth" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }}>
+            <AuthScreen mode={authMode} setMode={setAuthMode} onDone={authDone} onBack={() => setView("landing")} toast={toast} />
+          </motion.div>
+        )}
+        {view === "app" && user && (
+          <motion.div key="app" className="shell" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <div className={"sideDim" + (sideOpen ? " show" : "")} onClick={() => setSideOpen(false)} />
+            <Sidebar tab={tab} setTab={setTab} user={user} open={sideOpen} setOpen={setSideOpen} logout={logout} />
+            <div className="main">
+              <Topbar title={TITLES[tab] || "Studio"} user={user} setSideOpen={setSideOpen} setTab={setTab} toast={toast} logout={logout} />
+              <div className="content">
+                <AnimatePresence mode="wait">
+                  <motion.div key={tab} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.28 }}>
+                    {tab === "dashboard" && <DashboardHome ctx={ctx} />}
+                    {tab === "create" && <CreatePage ctx={ctx} />}
+                    {tab === "i2v" && <I2VPage ctx={ctx} />}
+                    {tab === "videos" && <VideosGrid ctx={ctx} list={videos} title="My Videos" sub={videos.length + " videos in your cloud library"} />}
+                    {tab === "templates" && <TemplatesPage ctx={ctx} />}
+                    {tab === "history" && <VideosGrid ctx={ctx} list={videos} title="History" sub="Every render, forever — with full prompt lineage" />}
+                    {tab === "downloads" && <VideosGrid ctx={ctx} list={videos.filter((v) => downloads.includes(v.id))} title="Downloads" sub={downloads.length + " exported MP4 files"} />}
+                    {tab === "subscription" && <SubscriptionPage ctx={ctx} />}
+                    {tab === "profile" && <ProfilePage ctx={ctx} />}
+                    {tab === "settings" && <SettingsPage ctx={ctx} />}
+                    {tab === "admin" && <AdminPage ctx={ctx} />}
+                    {tab === "video" && <VideoPage ctx={ctx} />}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <Modal open={demoOpen} onClose={() => setDemoOpen(false)} title="Text2Motion in action" width={760}>
+        <FakePlayer src={IMG.fantasy} duration={15} res="1080p" />
+        <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 18, flexWrap: "wrap" }}>
+          {["Prompt: “Dragon circling a crystal castle”", "Style: Fantasy", "45s · 1080p · 60fps"].map((b) => <span key={b} className="badge pill-blue">{b}</span>)}
+        </div>
+      </Modal>
+      <Modal open={!!delTarget} onClose={() => setDelTarget(null)} title="Delete this video?">
+        <p className="muted" style={{ fontSize: 14.5, lineHeight: 1.7, marginBottom: 22 }}>The video and its render history will be permanently removed from your cloud storage.</p>
+        <div style={{ display: "flex", gap: 12 }}>
+          <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setDelTarget(null)}>Cancel</button>
+          <button className="btn btn-danger" style={{ flex: 1 }} onClick={() => deleteVideo(delTarget)}><Icon name="trash" size={15} /> Delete</button>
+        </div>
+      </Modal>
+      <Toasts list={toasts} />
+    </>
+  );
+}
